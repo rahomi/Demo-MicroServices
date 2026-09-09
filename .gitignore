@@ -44,6 +44,10 @@ bld/
 ## Docker
 docker-compose.override.yml
 
+## Obsidian
+docs/.obsidian/workspace.json
+docs/.obsidian/workspace-mobile.json
+
 ## OS
 .DS_Store
 Thumbs.db
