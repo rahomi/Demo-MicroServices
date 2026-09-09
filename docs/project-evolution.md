@@ -20,7 +20,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 |--------|-------|--------|-----------------|
 | T01 | Verify .NET SDK and establish solution/project structure | ✅ Done | [[01-scaffold-solution]] |
 | T02 | MediatR migration strategy for Products and Baskets | ⬜ Open | — |
-| T03 | RabbitMQ contracts and connection infrastructure design | ⬜ Open | — |
+| T03 | RabbitMQ contracts and connection infrastructure design | ✅ Done | [[03-rabbitmq-contracts-design]] |
 | T04 | BFF routing map and Refit client contracts | ⬜ Open | — |
 | T05 | Orders and Identity service design | ⬜ Open | — |
 | T06 | Notifications service and event flow design | ⬜ Open | — |

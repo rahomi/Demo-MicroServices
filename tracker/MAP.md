@@ -21,6 +21,7 @@ A locally runnable microservices demo extending Chapter 19: six ASP.NET Core ser
 ## Decisions so far
 
 - **T01 (resolved):** .NET 10.0.301 SDK selected, targeting `net10.0`. Solution is `EcommerceDemo.slnx` with 7 projects under `EcommerceDemo/`. All services reference `Contracts`. `Directory.Build.props` enforces shared build settings with `TreatWarningsAsErrors`. See [[01-scaffold-solution]].
+- **T03 (resolved):** Contracts project design confirmed. Event DTOs (`OrderSubmitted`, `ProductChanged`, `BasketCheckedOut`) are records in `Contracts.Events`. RabbitMQ infra uses `IRabbitMqConnection` (singleton, lazy reconnect), `IEventPublisher` (channel-per-publish, W3C traceparent injection), `EventConsumer<T>` (BackgroundService, traceparent extraction). Topology: `amq.topic` exchange, dot-separated routing keys. Serialization: `System.Text.Json`. See [T03 ticket](tickets/T03-rabbitmq-contracts-and-connection-design.md).
 
 ## Ticket index
 
@@ -40,16 +41,15 @@ A locally runnable microservices demo extending Chapter 19: six ASP.NET Core ser
 ### Frontier (open, unblocked, unclaimed)
 
 - **T02** — MediatR migration strategy for Products and Baskets
-- **T03** — RabbitMQ contracts and connection infrastructure design
+- **T05** — Orders and Identity service design (unblocked — T03 resolved)
+- **T06** — Notifications service and event flow design (unblocked — T03 resolved)
 - **T10** — OpenTelemetry + Jaeger distributed tracing design
 - **Implementation Tickets 2–6** — Products, Baskets, Identity, Orders, Notifications services (all unblocked now that the scaffold is done)
 
 ### Blocked (open, waiting on dependencies)
 
-- T05 ← T03
 - T07 ← T10
-- T04 ← T02, T03
-- T06 ← T03
+- T04 ← T02 (T03 resolved)
 - T09 ← T04, T05
 - T08 ← T04, T05, T06, T07, T09, T10
 
