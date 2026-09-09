@@ -29,4 +29,26 @@ The PLAN.md says to verify the installed latest stable .NET SDK and use it when 
 6. sln file 
 ### Resolution
 
-*(To be filled when resolved — record the SDK version, target framework, and confirmed project tree.)*
+**SDK version:** .NET 9.0.313 and .NET 10.0.301 installed. Selected .NET 10 (latest stable).
+
+**Target framework:** `net10.0`
+
+**Solution file:** `EcommerceDemo.slnx` (new XML solution format, created by `dotnet new sln` on .NET 10)
+
+**Confirmed project tree:**
+```
+EcommerceDemo/
+├── Contracts/          — Shared event DTOs and RabbitMQ infrastructure (class library)
+├── BFF/                — Backend for Frontend
+├── Products/           — Catalog service
+├── Baskets/            — Basket service
+├── Orders/             — Orders service (new)
+├── Notifications/      — Notifications service (new)
+└── Identity/           — Fake identity service (new)
+```
+
+**Project references:** All 6 service projects reference `Contracts`. No service-to-service references.
+
+**Shared build conventions:** `Directory.Build.props` at repo root with `<TargetFramework>net10.0</TargetFramework>`, `<Nullable>enable</Nullable>`, `<ImplicitUsings>enable</ImplicitUsings>`, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+
+**Status:** ✅ Resolved. See [[01-scaffold-solution]] for the completion note.

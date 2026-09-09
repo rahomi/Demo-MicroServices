@@ -18,7 +18,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 
 | Ticket | Title | Status | Completion Note |
 |--------|-------|--------|-----------------|
-| T01 | Verify .NET SDK and establish solution/project structure | ⬜ Open | — |
+| T01 | Verify .NET SDK and establish solution/project structure | ✅ Done | [[01-scaffold-solution]] |
 | T02 | MediatR migration strategy for Products and Baskets | ⬜ Open | — |
 | T03 | RabbitMQ contracts and connection infrastructure design | ⬜ Open | — |
 | T04 | BFF routing map and Refit client contracts | ⬜ Open | — |
@@ -33,7 +33,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 
 | # | Ticket | Status | Completion Note |
 |---|--------|--------|-----------------|
-| 1 | Scaffold solution, projects, and shared Contracts | ⬜ Open | — |
+| 1 | Scaffold solution, projects, and shared Contracts | ✅ Done | [[01-scaffold-solution]] |
 | 2 | Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged | ⬜ Open | — |
 | 3 | Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut | ⬜ Open | — |
 | 4 | Identity service: fake customer endpoint | ⬜ Open | — |
@@ -49,7 +49,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 
 > As each ticket is completed, create a note from the [template](templates/ticket-completion.md) and link it here. The notes form the project's evolution narrative.
 
-1. _(none yet — start with Ticket 1: Scaffold solution)_
+1. [[01-scaffold-solution]] — Scaffold EcommerceDemo solution, projects, and shared Contracts (T01 + Ticket 1)
 
 ## 🏷️ Tag Legend
 

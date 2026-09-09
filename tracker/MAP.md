@@ -20,7 +20,7 @@ A locally runnable microservices demo extending Chapter 19: six ASP.NET Core ser
 
 ## Decisions so far
 
-*(No tickets resolved yet — the map is freshly charted.)*
+- **T01 (resolved):** .NET 10.0.301 SDK selected, targeting `net10.0`. Solution is `EcommerceDemo.slnx` with 7 projects under `EcommerceDemo/`. All services reference `Contracts`. `Directory.Build.props` enforces shared build settings with `TreatWarningsAsErrors`. See [[01-scaffold-solution]].
 
 ## Ticket index
 
@@ -39,18 +39,18 @@ A locally runnable microservices demo extending Chapter 19: six ASP.NET Core ser
 
 ### Frontier (open, unblocked, unclaimed)
 
-- **T01** — Verify .NET SDK and establish solution/project structure
+- **T02** — MediatR migration strategy for Products and Baskets
+- **T03** — RabbitMQ contracts and connection infrastructure design
+- **T10** — OpenTelemetry + Jaeger distributed tracing design
+- **Implementation Tickets 2–6** — Products, Baskets, Identity, Orders, Notifications services (all unblocked now that the scaffold is done)
 
 ### Blocked (open, waiting on dependencies)
 
-- T02 ← T01
-- T03 ← T01
-- T05 ← T01, T03
-- T07 ← T01, T10
+- T05 ← T03
+- T07 ← T10
 - T04 ← T02, T03
 - T06 ← T03
 - T09 ← T04, T05
-- T10 ← T01
 - T08 ← T04, T05, T06, T07, T09, T10
 
 ## Not yet specified
