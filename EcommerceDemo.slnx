@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/EcommerceDemo/">
+    <Project Path="EcommerceDemo/Baskets/Baskets.csproj" />
+    <Project Path="EcommerceDemo/BFF/BFF.csproj" />
+    <Project Path="EcommerceDemo/Contracts/Contracts.csproj" />
+    <Project Path="EcommerceDemo/Identity/Identity.csproj" />
+    <Project Path="EcommerceDemo/Notifications/Notifications.csproj" />
+    <Project Path="EcommerceDemo/Orders/Orders.csproj" />
+    <Project Path="EcommerceDemo/Products/Products.csproj" />
+  </Folder>
+</Solution>
