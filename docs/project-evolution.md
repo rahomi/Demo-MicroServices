@@ -50,6 +50,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 > As each ticket is completed, create a note from the [template](templates/ticket-completion.md) and link it here. The notes form the project's evolution narrative.
 
 1. [[01-scaffold-solution]] — Scaffold EcommerceDemo solution, projects, and shared Contracts (T01 + Ticket 1)
+2. [[03-rabbitmq-contracts-design]] — RabbitMQ contracts and connection infrastructure design (T03)
 
 ## 🏷️ Tag Legend
 
