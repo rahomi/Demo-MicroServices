@@ -97,7 +97,51 @@ docker compose logs bff | findstr "saga"
 ```
 ✅ Saga compensates on failure. Jaeger shows a full distributed trace.
 
-### Step 5 — Create the completion note
+### Step 5 — Confirm with the developer (GATE — do not skip)
+
+**Before committing or writing any notes, the agent must get explicit confirmation from the developer.**
+
+The agent should:
+
+1. Run the appropriate test level (from Step 4) and show the results.
+2. Run `git status` and show the working tree state.
+3. Ask the developer:
+
+   > ✅ Testing complete. Here's what I found:
+   > - Test results: [summary]
+   > - Working tree: [clean / has uncommitted changes]
+   >
+   > **Does the project work correctly? Are you satisfied that the working tree is clean and ready to commit?**
+   >
+   > - Type **yes** to commit and create the completion note.
+   > - Type **no** to go back and fix issues first.
+
+4. **Only proceed to Step 6 if the developer says "yes".**
+   - If the developer says "no" or reports issues, go back to Step 3 (Implement) and fix the problems.
+   - Re-run tests and ask for confirmation again.
+   - This gate ensures we never commit broken work or write notes for incomplete tickets.
+
+### Step 6 — Commit the implementation work
+
+Once the developer confirms:
+
+```bash
+# Stage all implementation changes
+git add -A
+
+# Commit with conventional commit format
+git commit -m "feat(ticket-N): short description of what was done
+
+Co-Authored-By: Cline SR"
+```
+
+Verify the working tree is now clean:
+```bash
+git status --short
+# Should show no output (clean working tree)
+```
+
+### Step 7 — Create the completion note
 
 1. Copy `docs/templates/ticket-completion.md` to `docs/notes/`:
    ```bash
@@ -110,7 +154,7 @@ docker compose logs bff | findstr "saga"
    - **What was done:** Concrete actions, files created
    - **Key decisions:** What was chosen and why
    - **Artifacts created:** File paths and descriptions
-   - **Testing & verification:** Commands run and results
+   - **Testing & verification:** Commands run and results (from Step 4)
    - **Notes for presentation:** Talking points for presenting this ticket
    - **Next steps:** What's now unblocked
 
@@ -118,7 +162,7 @@ docker compose logs bff | findstr "saga"
    - Change the ticket's status from ⬜ Open to ✅ Done
    - Add a link to the completion note in the "Completion Notes" section
 
-### Step 6 — Commit the completion note
+### Step 8 — Commit the completion note
 
 ```bash
 git add docs/notes/ docs/project-evolution.md
@@ -127,7 +171,7 @@ git commit -m "docs(ticket-N): completion note and evolution index update
 Co-Authored-By: Cline SR"
 ```
 
-### Step 7 — Check what's unblocked
+### Step 9 — Check what's unblocked
 
 1. Open `tracker/MAP.md` — check if completing this ticket unblocks new decision tickets.
 2. Open `tickets.md` — check if completing this ticket unblocks new implementation tickets.
@@ -178,5 +222,7 @@ When presenting the project's evolution:
 2. **Always create a completion note.** If it's not in `docs/notes/`, it didn't happen.
 3. **Always update the evolution index.** `docs/project-evolution.md` is the presentation surface.
 4. **Test before committing.** Run the appropriate test level (1–5) before marking a ticket done.
-5. **Commit with conventional commits.** `feat(ticket-N):` prefix makes the git log readable.
-6. **Read before you write.** Always read the plan, map, and related completion notes before starting.
+5. **Get developer confirmation before committing.** The agent must ask the developer to confirm the project works and the working tree is clean before committing (Step 5 gate). Never commit without explicit "yes" from the developer.
+6. **Commit implementation work first, then the note.** Two separate commits: `feat(ticket-N):` for the code, `docs(ticket-N):` for the completion note.
+7. **Commit with conventional commits.** `feat(ticket-N):` prefix makes the git log readable.
+8. **Read before you write.** Always read the plan, map, and related completion notes before starting.
