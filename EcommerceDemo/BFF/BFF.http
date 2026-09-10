@@ -1,6 +1,85 @@
-@BFF_HostAddress = http://localhost:5108
+@BFF_HostAddress = http://localhost:5000
 
-GET {{BFF_HostAddress}}/weatherforecast/
+### Get the fake customer (Identity)
+GET {{BFF_HostAddress}}/api/identity/customer
+Accept: application/json
+
+### Get all products
+GET {{BFF_HostAddress}}/api/products
+Accept: application/json
+
+### Get product by ID
+GET {{BFF_HostAddress}}/api/products/11111111-1111-1111-1111-111111111111
+Accept: application/json
+
+### Create a product
+POST {{BFF_HostAddress}}/api/products
+Content-Type: application/json
+
+{
+  "name": "USB-C Charger",
+  "price": 34.99,
+  "category": "Electronics"
+}
+
+### Update a product
+PUT {{BFF_HostAddress}}/api/products/11111111-1111-1111-1111-111111111111
+Content-Type: application/json
+
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "name": "Wireless Mouse Pro",
+  "price": 39.99,
+  "category": "Electronics"
+}
+
+### Delete a product
+DELETE {{BFF_HostAddress}}/api/products/11111111-1111-1111-1111-111111111111
+
+### Get basket for customer
+GET {{BFF_HostAddress}}/api/baskets/cust-001
+Accept: application/json
+
+### Add item to basket
+POST {{BFF_HostAddress}}/api/baskets/cust-001/items
+Content-Type: application/json
+
+{
+  "productId": "11111111-1111-1111-1111-111111111111",
+  "productName": "Wireless Mouse",
+  "unitPrice": 29.99,
+  "quantity": 2
+}
+
+### Remove item from basket
+DELETE {{BFF_HostAddress}}/api/baskets/cust-001/items/11111111-1111-1111-1111-111111111111
+
+### Submit an order directly
+POST {{BFF_HostAddress}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "cust-001",
+  "items": [
+    {
+      "productId": "11111111-1111-1111-1111-111111111111",
+      "productName": "Wireless Mouse",
+      "unitPrice": 29.99,
+      "quantity": 2
+    }
+  ]
+}
+
+### Get order by ID
+GET {{BFF_HostAddress}}/api/orders/11111111-1111-1111-1111-111111111111
+Accept: application/json
+
+### Get orders by customer
+GET {{BFF_HostAddress}}/api/orders?customerId=cust-001
+Accept: application/json
+
+### Checkout: orchestrates basket checkout + order creation
+POST {{BFF_HostAddress}}/api/baskets/cust-001/checkout
 Accept: application/json
 
 ###
