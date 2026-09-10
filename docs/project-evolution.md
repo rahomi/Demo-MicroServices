@@ -37,7 +37,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 | 2 | Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged | ✅ Done | [[02-products-service]] |
 | 3 | Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut | ✅ Done | [[03-baskets-service]] |
 | 4 | Identity service: fake customer endpoint | ✅ Done | [[04-identity-service]] |
-| 5 | Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted | ⬜ Open | — |
+| 5 | Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted | ✅ Done | [[05-orders-service]] |
 | 6 | Notifications service: RabbitMQ consumer + received events endpoint | ⬜ Open | — |
 | 7 | BFF: Refit clients + routing map + checkout orchestration | ⬜ Open | — |
 | 8 | Saga pattern: orchestration-based checkout with compensating transactions | ⬜ Open | — |
@@ -54,6 +54,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 3. [[02-products-service]] — Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged + Swagger UI (Ticket 2)
 4. [[03-baskets-service]] — Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut + ProductChanged consumer + Swagger UI (Ticket 3)
 5. [[04-identity-service]] — Identity service: fake customer endpoint + Swagger UI (Ticket 4)
+6. [[05-orders-service]] — Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted + Swagger UI (Ticket 5)
 
 ## 🏷️ Tag Legend
 
