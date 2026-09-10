@@ -35,7 +35,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 |---|--------|--------|-----------------|
 | 1 | Scaffold solution, projects, and shared Contracts | ✅ Done | [[01-scaffold-solution]] |
 | 2 | Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged | ✅ Done | [[02-products-service]] |
-| 3 | Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut | ⬜ Open | — |
+| 3 | Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut | ✅ Done | [[03-baskets-service]] |
 | 4 | Identity service: fake customer endpoint | ⬜ Open | — |
 | 5 | Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted | ⬜ Open | — |
 | 6 | Notifications service: RabbitMQ consumer + received events endpoint | ⬜ Open | — |
@@ -52,6 +52,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 1. [[01-scaffold-solution]] — Scaffold EcommerceDemo solution, projects, and shared Contracts (T01 + Ticket 1)
 2. [[03-rabbitmq-contracts-design]] — RabbitMQ contracts and connection infrastructure design (T03)
 3. [[02-products-service]] — Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged + Swagger UI (Ticket 2)
+4. [[03-baskets-service]] — Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut + ProductChanged consumer + Swagger UI (Ticket 3)
 
 ## 🏷️ Tag Legend
 
