@@ -1,6 +1,5 @@
-@Identity_HostAddress = http://localhost:5148
+@Identity_HostAddress = http://localhost:5003
 
-GET {{Identity_HostAddress}}/weatherforecast/
+### Get the fake customer
+GET {{Identity_HostAddress}}/api/customer
 Accept: application/json
-
-###
