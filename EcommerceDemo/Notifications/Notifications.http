@@ -1,6 +1,7 @@
-@Notifications_HostAddress = http://localhost:5241
+@Notifications_HostAddress = http://localhost:5203
 
-GET {{Notifications_HostAddress}}/weatherforecast/
+### Get all received notifications (events consumed from RabbitMQ)
+GET {{Notifications_HostAddress}}/api/notifications
 Accept: application/json
 
 ###
