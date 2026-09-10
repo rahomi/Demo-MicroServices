@@ -1,6 +1,33 @@
-@Baskets_HostAddress = http://localhost:5147
+@Baskets_HostAddress = http://localhost:5201
 
-GET {{Baskets_HostAddress}}/weatherforecast/
+### Get a customer's basket (empty if none exists)
+GET {{Baskets_HostAddress}}/api/baskets/cust-001
 Accept: application/json
 
-###
+### Add an item to the basket
+POST {{Baskets_HostAddress}}/api/baskets/cust-001/items
+Content-Type: application/json
+
+{
+  "productId": "11111111-1111-1111-1111-111111111111",
+  "productName": "Wireless Mouse",
+  "unitPrice": 29.99,
+  "quantity": 2
+}
+
+### Add a second item to the basket
+POST {{Baskets_HostAddress}}/api/baskets/cust-001/items
+Content-Type: application/json
+
+{
+  "productId": "22222222-2222-2222-2222-222222222222",
+  "productName": "Mechanical Keyboard",
+  "unitPrice": 89.99,
+  "quantity": 1
+}
+
+### Remove an item from the basket
+DELETE {{Baskets_HostAddress}}/api/baskets/cust-001/items/11111111-1111-1111-1111-111111111111
+
+### Check out the basket (clears items and publishes BasketCheckedOut event)
+POST {{Baskets_HostAddress}}/api/baskets/cust-001/checkout
