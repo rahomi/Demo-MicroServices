@@ -42,7 +42,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 | 7 | BFF: Refit clients + routing map + checkout orchestration | ✅ Done | [[07-bff-service]] |
 | 8 | Saga pattern: orchestration-based checkout with compensating transactions | ✅ Done | [[08-saga-orchestration]] |
 | 9 | Distributed tracing: OpenTelemetry + Jaeger | ✅ Done | [[09-distributed-tracing]] |
-| 10 | Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger | ⬜ Open | — |
+| 10 | Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger | ✅ Done | [[10-docker-compose]] |
 | 11 | HTTP examples + README documentation | ⬜ Open | — |
 
 ## 📝 Completion Notes (in order of completion)
@@ -59,6 +59,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 8. [[07-bff-service]] — BFF: Refit clients + routing map + checkout orchestration + error handling + Swagger UI (Ticket 7)
 9. [[08-saga-orchestration]] — Saga pattern: orchestration-based checkout with compensating transactions (Ticket 8)
 10. [[09-distributed-tracing]] — Distributed tracing: OpenTelemetry + Jaeger (Ticket 9)
+11. [[10-docker-compose]] — Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger (Ticket 10)
 
 ## 🏷️ Tag Legend
 
