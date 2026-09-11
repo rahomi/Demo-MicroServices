@@ -1,85 +1,220 @@
 ---
 ticket: "5"
-title: "Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted event + Swagger UI"
+title: "Order submission with MediatR CQRS + server-side total + OrderSubmitted event"
 type: "task"
 date_completed: "2026-09-10"
 status: "completed"
 blocked_by: ["01-scaffold-solution"]
-blocks: ["BFF: Refit clients + routing map + checkout orchestration", "Saga pattern: orchestration-based checkout with compensating transactions"]
-tags: [ticket-completion]
+blocks: ["07-bff-service", "08-saga-orchestration"]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# Ticket 5 — Orders Service: MediatR CQRS + EF Core InMemory + Order Endpoints + OrderSubmitted + Swagger UI
+# 📋 Orders Service: CQRS + Server-Side Calculation + OrderSubmitted Event
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> The Orders service accepts order submissions with line items, calculates the total **server-side** (never trusting client-sent totals), persists to EF Core InMemory, and publishes an `OrderSubmitted` integration event. It follows the same CQRS-with-MediatR pattern as Products and Baskets.
 
-Built the complete Orders service with MediatR command/query handlers, EF Core InMemory database, order submission (creates order, publishes `OrderSubmitted`), order query endpoints (by ID and by customer), and Swagger UI with OpenAPI specification. A user can submit an order with line items, retrieve it by ID or by customer, and see `OrderSubmitted` events published to RabbitMQ — all testable via Swagger UI at `/swagger`.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Added NuGet packages: `MediatR 14.2.0`, `Microsoft.EntityFrameworkCore.InMemory 10.0.12`, `Swashbuckle.AspNetCore 10.2.3`
-- Created `Order` domain model (Id, CustomerId, Items, Total, Status, CreatedAt) and `OrderItem` (Id, OrderId, ProductId, ProductName, UnitPrice, Quantity)
-- Created `OrderDbContext : DbContext` with `DbSet<Order>` and `DbSet<OrderItem>` using `UseInMemoryDatabase("OrdersDb")`
-- Created MediatR query handlers: `GetOrderByIdQuery`, `GetOrdersByCustomerQuery`
-- Created MediatR command handler: `SubmitOrderCommand` (creates order, calculates total, persists, publishes `OrderSubmitted` event via `IEventPublisher` with best-effort graceful degradation when RabbitMQ is unavailable)
-- Created Minimal API endpoints: `POST /api/orders`, `GET /api/orders/{id}`, `GET /api/orders?customerId={id}`
-- Added Swagger UI and OpenAPI specification at `/swagger` with `WithSummary`, `WithDescription`, and `Produces` metadata on each endpoint
-- Updated `.http` file with example requests for all endpoints
-- Set service port to 5202 in `launchSettings.json`
+- Implement order submission with **server-side total calculation** (data integrity)
+- Publish `OrderSubmitted` events with full order payload
+- Apply the **explicit FK pattern** on `OrderItem` (learned from Baskets service)
+- Understand why Orders has **no seed data** (unlike Products)
 
-## Key decisions
+---
 
-- **Best-effort event publishing:** The `SubmitOrderHandler` wraps `IEventPublisher.PublishAsync` in try-catch with a warning log, matching the Products and Baskets service pattern. This allows the service to function locally without RabbitMQ running (e.g., during development), while still publishing events when RabbitMQ is available (via Docker Compose). This is intentional for the demo — not a production pattern.
-- **Total calculated server-side:** The order total is computed from line items on the server (`order.Items.Sum(i => i.UnitPrice * i.Quantity)`), not trusted from the client request. This ensures data integrity.
-- **Explicit FK on OrderItem:** `OrderItem` has an explicit `OrderId` foreign key property mapped via `HasMany(o => o.Items).WithOne().HasForeignKey(i => i.OrderId)`, following the same explicit-FK pattern used in the Baskets service to avoid EF Core InMemory change tracking issues.
-- **Swashbuckle.AspNetCore for Swagger UI:** Same decision as Products, Baskets, and Identity services — used Swashbuckle 10.2.3 for consistency and to avoid deprecation warnings under `TreatWarningsAsErrors`.
-- **No seed data:** Unlike Products (which seeds 5 products), the Orders service starts with an empty database. Orders are created via the `POST /api/orders` endpoint. This is intentional — orders are user-generated, not pre-seeded.
+## 🧩 Main Concepts
 
-## Artifacts created
+### 1. Server-Side Total Calculation
 
-- `EcommerceDemo/Orders/Domain/Order.cs` — Order and OrderItem entity models
+#### Definition
+
+The order total is computed from line items on the server (`Items.Sum(i => i.UnitPrice * i.Quantity)`), not trusted from the client request.
+
+#### Problem It Solves
+
+> [!danger]
+> If the client sends `Total: 0.01` with items worth $1,000, trusting the client total means a $999.99 loss. Server-side calculation prevents price manipulation.
+
+#### Code Diff
+
+**Before (naive — trusts client):**
+
+```csharp
+// ❌ DANGEROUS — client controls the total
+var order = new Order
+{
+    CustomerId = cmd.CustomerId,
+    Items = cmd.Items,
+    Total = cmd.Total  // Client-sent total!
+};
+```
+
+**After (secure — server calculates):**
+
+```csharp
+// ✅ SECURE — server computes total from line items
+var order = new Order
+{
+    CustomerId = cmd.CustomerId,
+    Items = cmd.Items.Select(i => new OrderItem
+    {
+        ProductId = i.ProductId,
+        ProductName = i.ProductName,
+        UnitPrice = i.UnitPrice,
+        Quantity = i.Quantity
+    }).ToList()
+};
+order.Total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
+```
+
+---
+
+### 2. OrderSubmitted Event
+
+#### Definition
+
+When an order is created, an `OrderSubmitted` event is published to RabbitMQ. This event carries the full order payload — ID, customer, total, items, timestamp.
+
+#### How It Works
+
+```mermaid
+flowchart LR
+    Client["Client"] -->|"POST /api/orders"| Endpoint["Minimal API"]
+    Endpoint --> MediatR["SubmitOrderHandler"]
+    MediatR -->|"1. Create order"| DB["OrderDbContext"]
+    MediatR -->|"2. Calculate total"| Calc["Sum(UnitPrice * Quantity)"]
+    MediatR -->|"3. Publish event"| Publisher["IEventPublisher"]
+    Publisher -->|"order.submitted"| Exchange["amq.topic"]
+    Exchange --> Queue["notifications.order-submitted"]
+    Queue --> Notifications["Notifications Service"]
+```
+
+#### Implementation
+
+```csharp
+public class SubmitOrderHandler : IRequestHandler<SubmitOrderCommand, Order>
+{
+    public async Task<Order> Handle(SubmitOrderCommand cmd, CancellationToken ct)
+    {
+        var order = new Order
+        {
+            CustomerId = cmd.CustomerId,
+            Status = "Submitted",
+            CreatedAt = DateTime.UtcNow,
+            Items = cmd.Items.Select(i => new OrderItem
+            {
+                ProductId = i.ProductId,
+                ProductName = i.ProductName,
+                UnitPrice = i.UnitPrice,
+                Quantity = i.Quantity
+            }).ToList()
+        };
+        order.Total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
+
+        _db.Orders.Add(order);
+        await _db.SaveChangesAsync(ct);
+
+        // Best-effort event publish
+        try
+        {
+            await _publisher.PublishAsync("amq.topic", "order.submitted",
+                new OrderSubmitted(order.Id, order.CustomerId, order.Total,
+                    order.Items.Select(i => new OrderItemDto(
+                        i.ProductId, i.ProductName, i.UnitPrice, i.Quantity)).ToList(),
+                    order.CreatedAt));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "RabbitMQ unavailable — event not published");
+        }
+
+        return order;
+    }
+}
+```
+
+---
+
+### 3. Explicit FK on OrderItem
+
+> [!info]
+> Following the same pattern discovered in the Baskets service — explicit `OrderId` FK property on `OrderItem` to avoid EF Core InMemory change tracking issues.
+
+```csharp
+modelBuilder.Entity<Order>()
+    .HasMany(o => o.Items)
+    .WithOne()
+    .HasForeignKey(i => i.OrderId);  // Explicit FK, not shadow
+```
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Add NuGet packages
+MediatR 14.2.0, EF Core InMemory 10.0.12, Swashbuckle 10.2.3
+
+### Step 2 — Create domain models
+`Order` (Id, CustomerId, Items, Total, Status, CreatedAt) + `OrderItem` (Id, OrderId, ProductId, ProductName, UnitPrice, Quantity)
+
+### Step 3 — Create DbContext
+`OrderDbContext` with `UseInMemoryDatabase("OrdersDb")`
+
+### Step 4 — Create MediatR handlers
+- Queries: `GetOrderByIdQuery`, `GetOrdersByCustomerQuery`
+- Command: `SubmitOrderCommand` (creates order, calculates total, publishes event)
+
+### Step 5 — Create Minimal API endpoints
+```
+POST /api/orders                      — submit order (publishes OrderSubmitted)
+GET  /api/orders/{id}                 — get by ID
+GET  /api/orders?customerId={id}      — list by customer
+```
+
+> [!tip]
+> No seed data — unlike Products (which seeds 5 products), Orders starts empty. Orders are user-generated, not pre-seeded.
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Total calculation | Server-side | Never trust client-sent totals |
+| Explicit FK on OrderItem | Property on entity | Avoids EF Core InMemory change tracking issues |
+| Seed data | None | Orders are user-generated |
+| Event payload | Full order (items + total) | Consumers get complete context without re-querying |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
+- [x] `POST /api/orders` creates order with 2 items, total = 149.97, status = "Submitted"
+- [x] `GET /api/orders/{id}` returns order with line items
+- [x] `GET /api/orders?customerId=cust-001` returns list of orders
+- [x] Swagger UI accessible at `/swagger`
+
+---
+
+## 📎 See Also
+
+- [[01-scaffold-solution]] — Contracts with `OrderSubmitted` event DTO
+- [[03-baskets-service]] — Explicit FK pattern discovered here
+- [[06-notifications-service]] — Consumes `OrderSubmitted` events
+- [[07-bff-service]] — BFF proxies order endpoints
+- [[08-saga-orchestration]] — Saga uses order submit + cancel
+
+---
+
+## 📝 Artifacts Created
+
+- `EcommerceDemo/Orders/Domain/Order.cs` — Order + OrderItem models
 - `EcommerceDemo/Orders/Data/OrderDbContext.cs` — EF Core InMemory DbContext
-- `EcommerceDemo/Orders/Features/Queries/GetOrders.cs` — GetOrderById and GetOrdersByCustomer query handlers
-- `EcommerceDemo/Orders/Features/Commands/SubmitOrder.cs` — SubmitOrder command handler with OrderSubmitted event publishing
-- `EcommerceDemo/Orders/Program.cs` — Updated with MediatR, EF Core, RabbitMQ, Swagger UI, and all Minimal API endpoints
-- `EcommerceDemo/Orders/Orders.csproj` — Added MediatR, EF Core InMemory, Swashbuckle.AspNetCore packages
-- `EcommerceDemo/Orders/Properties/launchSettings.json` — Set port to 5202
-- `EcommerceDemo/Orders/Orders.http` — Updated with example requests for all endpoints
-
-## Testing & verification
-
-- [x] `dotnet build EcommerceDemo.slnx` — Build succeeded, 0 warnings, 0 errors
-- [x] Service starts on `http://localhost:5202`
-- [x] `POST /api/orders` — Creates order with 2 items (Wireless Mouse x2, Mechanical Keyboard x1), total = 149.97, status = "Submitted", returns 201 Created
-- [x] `GET /api/orders/{id}` — Returns the created order with line items (200 OK)
-- [x] `GET /api/orders?customerId=cust-001` — Returns list of orders for customer (200 OK)
-- [x] Swagger UI accessible at `http://localhost:5202/swagger/index.html` (HTTP 200)
-- [x] RabbitMQ event publishing gracefully handles RabbitMQ being unavailable (warning log, no crash)
-
-```
-dotnet build EcommerceDemo.slnx --nologo
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
-```
-
-## Dependencies
-
-- **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** [[07-bff-service]] (BFF needs Orders endpoints to proxy), [[08-saga-orchestration]] (Saga needs Orders to create and cancel orders)
-
-## Notes for presentation
-
-- Show the Swagger UI at `/swagger` — interactive API testing for all order operations
-- Demonstrate the order lifecycle: submit an order with multiple line items, retrieve it by ID, list orders by customer
-- Point out the MediatR CQRS pattern: commands (write) and queries (read) are separated into different handlers
-- The `OrderSubmitted` event with items, total, and timestamp shows how integration events carry the full order payload
-- Show the service logs — RabbitMQ connection attempts and graceful degradation warnings demonstrate the messaging integration
-- The order total is calculated server-side from line items, not trusted from the client — a good data integrity talking point
-
-## Next steps
-
-All downstream tickets have been completed:
-- [[06-notifications-service]] — Notifications consumes `OrderSubmitted` events (done)
-- [[07-bff-service]] — BFF proxies Orders endpoints (done)
-- [[08-saga-orchestration]] — Saga uses Orders submit + cancel (done)
+- `EcommerceDemo/Orders/Features/Queries/GetOrders.cs` — Query handlers
+- `EcommerceDemo/Orders/Features/Commands/SubmitOrder.cs` — Submit handler with event publishing

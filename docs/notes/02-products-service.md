@@ -1,89 +1,282 @@
 ---
 ticket: "2"
-title: "Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged event + Swagger UI"
+title: "CQRS with MediatR + EF Core InMemory + CRUD + Integration Events + Swagger"
 type: "task"
 date_completed: "2026-09-10"
 status: "completed"
 blocked_by: ["01-scaffold-solution"]
-blocks: ["BFF: Refit clients + routing map + checkout orchestration"]
-tags: [ticket-completion]
+blocks: ["07-bff-service", "03-baskets-service"]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# Ticket 2 — Products Service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged + Swagger UI
+# 📦 Products Service: CQRS with MediatR + EF Core + Integration Events
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> The Products service is the first real microservice. It demonstrates **CQRS with MediatR** (separate command/query handlers), **EF Core InMemory** with seed data, full **CRUD endpoints** via Minimal API, **integration event publishing** (`ProductChanged`) to RabbitMQ, and **Swagger UI** for interactive testing.
 
-Built the complete Products/Catalog service with MediatR command/query handlers, EF Core InMemory database with seed data, full CRUD endpoints via Minimal API, `ProductChanged` event publishing on create/update/delete, and Swagger UI with OpenAPI specification for interactive API testing. A user can start the service, browse seeded products, create/update/delete products, and see `ProductChanged` events published to RabbitMQ — all testable via Swagger UI at `/swagger`.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Added NuGet packages: `MediatR 14.2.0`, `Microsoft.EntityFrameworkCore.InMemory 10.0.12`, `Swashbuckle.AspNetCore 10.2.3`
-- Created `Product` domain model (Id, Name, Price, Category)
-- Created `ProductDbContext : DbContext` with `DbSet<Product>` using `UseInMemoryDatabase("ProductsDb")`
-- Created `ProductDbSeeder` — seeds 5 sample products on startup (Wireless Mouse, Mechanical Keyboard, USB-C Hub, 27-inch Monitor, Laptop Stand)
-- Created MediatR query handlers: `GetProductsQuery`, `GetProductByIdQuery`
-- Created MediatR command handlers: `CreateProductCommand`, `UpdateProductCommand`, `DeleteProductCommand`
-- Each command handler publishes a `ProductChanged` event to RabbitMQ via `IEventPublisher` (best-effort with graceful degradation when RabbitMQ is unavailable)
-- Created Minimal API endpoints: `GET /api/products`, `GET /api/products/{id}`, `POST /api/products`, `PUT /api/products/{id}`, `DELETE /api/products/{id}`
-- Added Swagger UI and OpenAPI specification at `/swagger` with `WithSummary`, `WithDescription`, and `Produces` metadata on each endpoint
-- Updated `.http` file with example requests for all endpoints
+- Apply the **CQRS pattern** using MediatR — separate command (write) and query (read) handlers
+- Set up **EF Core InMemory** with seed data for rapid prototyping
+- Publish **integration events** on state changes (create/update/delete)
+- Add **Swagger UI** with OpenAPI metadata on Minimal API endpoints
+- Implement **best-effort event publishing** (graceful degradation when RabbitMQ is unavailable)
 
-## Key decisions
+---
 
-- **Best-effort event publishing:** Command handlers wrap `IEventPublisher.PublishAsync` in try-catch with warning log. This allows the service to function locally without RabbitMQ running (e.g., during development), while still publishing events when RabbitMQ is available (via Docker Compose). This is intentional for the demo — not a production pattern.
-- **Swashbuckle.AspNetCore for Swagger UI:** Used Swashbuckle 10.2.3 instead of `Microsoft.AspNetCore.OpenApi` because the latter's `WithOpenApi()` extension is deprecated in .NET 10 (fails under `TreatWarningsAsErrors`). Swashbuckle provides `AddSwaggerGen`, `UseSwagger`, and `UseSwaggerUI` without deprecation warnings.
-- **No `GenerateDocumentationFile`:** XML doc comments in top-level `Program.cs` cause CS1587 errors when `GenerateDocumentationFile` is enabled. Used `WithSummary()`/`WithDescription()` instead for Swagger metadata.
-- **`Microsoft.OpenApi` namespace:** In Microsoft.OpenApi 2.x (used by Swashbuckle 10.x), `OpenApiInfo` is in the `Microsoft.OpenApi` root namespace, not `Microsoft.OpenApi.Models`.
+## 🧩 Main Concepts
 
-## Artifacts created
+### 1. CQRS with MediatR
 
-- `EcommerceDemo/Products/Domain/Product.cs` — Product entity model
+#### Definition
+
+**CQRS** (Command Query Responsibility Segregation) separates read operations (queries) from write operations (commands). **MediatR** is a .NET library that implements the mediator pattern, routing requests to handlers without direct coupling.
+
+#### Why It Exists
+
+In a traditional CRUD service, a single service class handles both reads and writes. As the service grows, this class becomes a "God Class" — doing too much, hard to test, hard to reason about. CQRS splits this into focused handlers.
+
+#### Problem It Solves
+
+Tight coupling between the caller and the handler. Without MediatR, the API endpoint directly instantiates a service and calls a method. With MediatR, the endpoint sends a request object, and MediatR routes it to the correct handler — the endpoint doesn't know which handler exists.
+
+#### How It Works
+
+```mermaid
+flowchart LR
+    Endpoint["Minimal API Endpoint"] -->|"IMediator.Send"| MediatR["MediatR"]
+    MediatR -->|"routes to"| CmdHandler["Command Handler"]
+    MediatR -->|"routes to"| QueryHandler["Query Handler"]
+    CmdHandler --> DbContext["ProductDbContext"]
+    CmdHandler --> Publisher["IEventPublisher"]
+    QueryHandler --> DbContext
+```
+
+#### Implementation
+
+**Step 1 — Define commands and queries as records:**
+
+```csharp
+// Query (read)
+public record GetProductsQuery : IRequest<List<Product>>;
+public record GetProductByIdQuery(Guid Id) : IRequest<Product?>;
+
+// Command (write)
+public record CreateProductCommand(string Name, decimal Price, string Category) 
+    : IRequest<Product>;
+public record UpdateProductCommand(Guid Id, string Name, decimal Price, string Category) 
+    : IRequest<Product>;
+public record DeleteProductCommand(Guid Id) : IRequest;
+```
+
+**Step 2 — Implement handlers:**
+
+```csharp
+public class CreateProductHandler : IRequestHandler<CreateProductCommand, Product>
+{
+    private readonly ProductDbContext _db;
+    private readonly IEventPublisher _publisher;
+
+    public async Task<Product> Handle(CreateProductCommand cmd, CancellationToken ct)
+    {
+        var product = new Product { Name = cmd.Name, Price = cmd.Price, Category = cmd.Category };
+        _db.Products.Add(product);
+        await _db.SaveChangesAsync(ct);
+
+        // Best-effort event publishing
+        try
+        {
+            await _publisher.PublishAsync("amq.topic", "product.changed",
+                new ProductChanged(product.Id, product.Name, product.Price, "created"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "RabbitMQ unavailable — event not published");
+        }
+
+        return product;
+    }
+}
+```
+
+> [!tip]
+> The `try-catch` around `PublishAsync` is intentional for the demo. It lets the service run locally without RabbitMQ. In production, use an outbox pattern or retry policies.
+
+**Step 3 — Wire up in Program.cs:**
+
+```csharp
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
+```
+
+---
+
+### 2. EF Core InMemory with Seed Data
+
+#### Definition
+
+**EF Core InMemory** is a database provider that stores data in memory. It's perfect for testing and demos — no SQL Server needed.
+
+#### Implementation
+
+```csharp
+public class ProductDbContext : DbContext
+{
+    public DbSet<Product> Products => Set<Product>();
+    public ProductDbContext(DbContextOptions<ProductDbContext> options) : base(options) { }
+}
+
+// Registration
+builder.Services.AddDbContext<ProductDbContext>(opt =>
+    opt.UseInMemoryDatabase("ProductsDb"));
+```
+
+**Seeder (runs on startup):**
+
+```csharp
+public static class ProductDbSeeder
+{
+    public static async Task SeedAsync(ProductDbContext db)
+    {
+        if (await db.Products.AnyAsync()) return;
+
+        db.Products.AddRange(
+            new Product { Name = "Wireless Mouse", Price = 29.99m, Category = "Peripherals" },
+            new Product { Name = "Mechanical Keyboard", Price = 89.99m, Category = "Peripherals" },
+            new Product { Name = "USB-C Hub", Price = 49.99m, Category = "Accessories" },
+            new Product { Name = "27-inch Monitor", Price = 299.99m, Category = "Displays" },
+            new Product { Name = "Laptop Stand", Price = 39.99m, Category = "Accessories" }
+        );
+        await db.SaveChangesAsync();
+    }
+}
+```
+
+> [!warning]
+> EF Core InMemory does not enforce constraints, doesn't support transactions, and has change tracking quirks. It's fine for demos but don't use it in production.
+
+---
+
+### 3. Minimal API Endpoints with Swagger
+
+#### Definition
+
+**Minimal APIs** are lightweight endpoint definitions using lambda expressions. **Swagger UI** provides an interactive web page for testing APIs.
+
+#### Code Diff: Raw Endpoint vs Swagger-Enriched
+
+**Before (raw, no metadata):**
+
+```csharp
+app.MapGet("/api/products", async (IMediator mediator) =>
+    await mediator.Send(new GetProductsQuery()));
+```
+
+**After (with Swagger metadata):**
+
+```csharp
+app.MapGet("/api/products", async (IMediator mediator) =>
+    await mediator.Send(new GetProductsQuery()))
+    .WithSummary("Get all products")
+    .WithDescription("Returns all products in the catalog")
+    .Produces<List<Product>>(StatusCodes.Status200OK);
+```
+
+> [!info]
+> Used **Swashbuckle.AspNetCore 10.2.3** instead of `Microsoft.AspNetCore.OpenApi` because the latter's `WithOpenApi()` extension is deprecated in .NET 10 and fails under `TreatWarningsAsErrors`.
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Add NuGet packages
+
+```xml
+<PackageReference Include="MediatR" Version="14.2.0" />
+<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.12" />
+<PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
+```
+
+### Step 2 — Create domain model
+
+```csharp
+public class Product
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = "";
+    public decimal Price { get; set; }
+    public string Category { get; set; } = "";
+}
+```
+
+### Step 3 — Create DbContext + seeder
+
+Register `ProductDbContext` with `UseInMemoryDatabase("ProductsDb")`, call `ProductDbSeeder.SeedAsync()` on startup.
+
+### Step 4 — Create MediatR handlers
+
+Queries: `GetProductsQuery`, `GetProductByIdQuery`
+Commands: `CreateProductCommand`, `UpdateProductCommand`, `DeleteProductCommand` (each publishes `ProductChanged`)
+
+### Step 5 — Create Minimal API endpoints
+
+```
+GET    /api/products           — list all
+GET    /api/products/{id}      — get by ID
+POST   /api/products           — create (publishes ProductChanged)
+PUT    /api/products/{id}      — update (publishes ProductChanged)
+DELETE /api/products/{id}      — delete (publishes ProductChanged)
+```
+
+### Step 6 — Add Swagger UI
+
+```csharp
+builder.Services.AddSwaggerGen();
+app.UseSwagger();
+app.UseSwaggerUI();
+```
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| CQRS library | MediatR 14.2.0 | Industry standard, simple DI registration |
+| Database | EF Core InMemory | No setup needed, perfect for demo |
+| Swagger | Swashbuckle 10.2.3 | `Microsoft.AspNetCore.OpenApi` deprecated in .NET 10 |
+| Event publishing | Best-effort (try-catch) | Service runs locally without RabbitMQ |
+| Seed data | 5 products | Makes demo instantly usable |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
+- [x] Service starts and seeds 5 products
+- [x] Full CRUD lifecycle verified (GET, POST, PUT, DELETE)
+- [x] Swagger UI accessible at `/swagger`
+- [x] RabbitMQ event publishing gracefully handles RabbitMQ being unavailable
+
+---
+
+## 📎 See Also
+
+- [[01-scaffold-solution]] — Contracts project with `IEventPublisher` used here
+- [[03-baskets-service]] — Consumes `ProductChanged` events from this service
+- [[07-bff-service]] — BFF proxies these endpoints
+- [[T03-rabbitmq-contracts-design]] — RabbitMQ topology design
+
+---
+
+## 📝 Artifacts Created
+
+- `EcommerceDemo/Products/Domain/Product.cs` — Product entity
 - `EcommerceDemo/Products/Data/ProductDbContext.cs` — EF Core InMemory DbContext
-- `EcommerceDemo/Products/Data/ProductDbSeeder.cs` — Seeds 5 sample products on startup
-- `EcommerceDemo/Products/Features/Queries/GetProducts.cs` — GetProducts and GetProductById query handlers
-- `EcommerceDemo/Products/Features/Commands/CreateProduct.cs` — Create, Update, Delete command handlers with ProductChanged event publishing
-- `EcommerceDemo/Products/Program.cs` — Updated with MediatR, EF Core, RabbitMQ, Swagger UI, and all Minimal API endpoints
-- `EcommerceDemo/Products/Products.csproj` — Added MediatR, EF Core InMemory, Swashbuckle.AspNetCore packages
-- `EcommerceDemo/Products/Products.http` — Updated with example requests for all endpoints
-
-## Testing & verification
-
-- [x] `dotnet build EcommerceDemo.slnx` — Build succeeded, 0 warnings, 0 errors
-- [x] Service starts on `http://localhost:5024` and seeds 5 products
-- [x] `GET /api/products` — returns all 5 seeded products
-- [x] `GET /api/products/{id}` — returns single product by ID
-- [x] `POST /api/products` — creates product, returns 201 Created
-- [x] `PUT /api/products/{id}` — updates product, returns updated product
-- [x] `DELETE /api/products/{id}` — returns 204 No Content
-- [x] Swagger UI accessible at `http://localhost:5024/swagger/index.html` (HTTP 200)
-- [x] OpenAPI spec at `/swagger/v1/swagger.json` contains all endpoints with proper title and paths
-- [x] RabbitMQ event publishing gracefully handles RabbitMQ being unavailable (warning log, no crash)
-
-```
-dotnet build EcommerceDemo.slnx --nologo
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
-```
-
-## Dependencies
-
-- **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** [[07-bff-service]] (BFF needs Products endpoints to proxy), [[03-baskets-service]] (Baskets consumes ProductChanged events)
-
-## Notes for presentation
-
-- Show the Swagger UI at `/swagger` — it's the most visual and interactive way to demonstrate the API
-- Demonstrate the full CRUD lifecycle: create a product, get it by ID, update it, delete it
-- Show the service logs — RabbitMQ connection attempts and graceful degradation warnings demonstrate the messaging integration
-- The 5 seeded products make the demo instantly usable without any setup
-- Point out the MediatR CQRS pattern: commands (write) and queries (read) are separated into different handlers
-- The `ProductChanged` event with `ChangeType` ("created", "updated", "deleted") shows how integration events carry context about what happened
-
-## Next steps
-
-All downstream tickets have been completed:
-- [[03-baskets-service]] — Baskets consumes `ProductChanged` events (done)
-- [[04-identity-service]] — Identity service (done)
-- [[05-orders-service]] — Orders service (done)
-- [[07-bff-service]] — BFF proxies Products endpoints (done)
+- `EcommerceDemo/Products/Data/ProductDbSeeder.cs` — Seeds 5 products
+- `EcommerceDemo/Products/Features/Queries/GetProducts.cs` — Query handlers
+- `EcommerceDemo/Products/Features/Commands/CreateProduct.cs` — Command handlers with event publishing
+- `EcommerceDemo/Products/Program.cs` — MediatR, EF Core, RabbitMQ, Swagger, endpoints

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "11-http-examples-and-readme.md",
+                "file": "retrospective.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "11-http-examples-and-readme"
+              "title": "retrospective"
             }
           }
         ]
@@ -168,14 +168,15 @@
   },
   "active": "d7e3b807fc8dd824",
   "lastOpenFiles": [
-    "retrospective.md",
     "README.md",
+    "01-scaffold-solution.md",
+    "11-http-examples-and-readme.md",
+    "retrospective.md",
     "T03-rabbitmq-contracts-design.md",
     "05-orders-service.md",
     "04-identity-service.md",
     "03-rabbitmq-contracts-design.md",
     "03-baskets-service.md",
-    "02-products-service.md",
-    "01-scaffold-solution.md"
+    "02-products-service.md"
   ]
 }

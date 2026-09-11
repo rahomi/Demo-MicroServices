@@ -1,75 +1,175 @@
 ---
 ticket: "T03"
-title: "RabbitMQ contracts and connection infrastructure design"
+title: "RabbitMQ messaging topology design"
 type: "task"
 date_completed: "2026-09-09"
 status: "completed"
 blocked_by: ["T01"]
 blocks: ["T04", "T05", "T06"]
-tags: [ticket-completion, decision]
+tags: [ticket-completion, concept-tutorial, decision]
 ---
 
-# T03 — RabbitMQ Contracts and Connection Infrastructure Design
+# 📡 RabbitMQ Messaging Topology Design
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> Before building services that publish/consume events, you need a clear messaging topology: which exchange, which routing keys, which queues, and how the publisher/consumer contract works. This note documents the design decisions for the RabbitMQ messaging layer — the `amq.topic` exchange, dot-separated routing keys, durable per-consumer queues, and the W3C traceparent propagation built into the publisher and consumer.
 
-Resolved the design decision for the shared Contracts project — event DTOs, RabbitMQ connection setup, and publish/consume abstractions using direct `RabbitMQ.Client`. The implementation was already done during T01 (scaffold); this ticket documents and confirms the design decisions so downstream tickets (T04, T05, T06) can proceed with a clear contract.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Read all Contracts source files to understand the actual implementation
-- Documented the Resolution section in `tracker/tickets/T03-rabbitmq-contracts-and-connection-design.md` covering all 7 questions
-- Updated `tracker/MAP.md` — marked T03 as resolved, moved T05 and T06 to the frontier (unblocked), updated the Blocked section
-- Updated `docs/project-evolution.md` — marked T03 as ✅ Done
-- Verified the solution still builds with zero errors and zero warnings
+- Design a **RabbitMQ topology** (exchange, routing keys, queue naming)
+- Define the **publisher contract** (`IEventPublisher.PublishAsync`)
+- Define the **consumer contract** (`EventConsumer<T>` abstract base class)
+- Understand why **direct `RabbitMQ.Client`** was chosen over MassTransit
+- See how **W3C traceparent** propagation is built into the messaging layer
 
-## Key decisions
+---
 
-- **Contracts project:** Class library `EcommerceDemo/Contracts/` targeting `net10.0`, referencing `RabbitMQ.Client 7.2.2` plus `Microsoft.Extensions.*` abstractions. No MassTransit — direct `RabbitMQ.Client` for educational visibility.
-- **Event DTOs:** C# `record` types (`OrderSubmitted`, `ProductChanged`, `BasketCheckedOut` + `OrderItemDto`, `BasketItemDto`) in `Contracts.Events` namespace for immutability and value equality.
-- **Connection:** `IRabbitMqConnection` / `RabbitMqConnection` — singleton in DI, semaphore-guarded lazy reconnect, no polling.
-- **Publisher:** `IEventPublisher.PublishAsync<T>(exchange, routingKey, event)` — channel-per-publish, `System.Text.Json` serialization, injects W3C `traceparent` into message headers for distributed tracing.
-- **Consumer:** `EventConsumer<T>` — abstract `BackgroundService` base class, subclasses implement `HandleAsync`, extracts `traceparent` from headers and creates linked activities, auto-ack/nack.
-- **Topology:** `amq.topic` built-in topic exchange, dot-separated routing keys (`product.changed`, `order.submitted`, `basket.checkedout`), per-consumer durable queue names.
-- **Serialization:** `System.Text.Json` with `JsonSerializer`.
+## 🧩 Main Concepts
 
-## Artifacts created
+### 1. Exchange and Routing Key Topology
 
-- `tracker/tickets/T03-rabbitmq-contracts-and-connection-design.md` — Resolution section filled in (no code changes; documentation only)
-- `tracker/MAP.md` — T03 marked resolved, frontier updated
+#### Definition
+
+RabbitMQ uses an **exchange** to route messages to queues based on **routing keys**. We use the built-in `amq.topic` exchange with dot-separated routing keys.
+
+#### Topology
+
+```mermaid
+flowchart LR
+    subgraph Publishers
+        Products["Products Service"]
+        Orders["Orders Service"]
+        Baskets["Baskets Service"]
+    end
+
+    subgraph Exchange["amq.topic exchange"]
+        direction TB
+    end
+
+    Products -->|"product.changed"| Exchange
+    Orders -->|"order.submitted"| Exchange
+    Baskets -->|"basket.checkedout"| Exchange
+
+    Exchange -->|"product.changed"| BasketsQ["baskets.product-changed"]
+    Exchange -->|"product.changed"| NotifQ1["notifications.product-changed"]
+    Exchange -->|"order.submitted"| NotifQ2["notifications.order-submitted"]
+    Exchange -->|"basket.checkedout"| NotifQ3["notifications.basket-checkedout"]
+```
+
+#### Routing Key Convention
+
+| Event | Routing Key | Publisher | Consumers |
+|-------|-------------|-----------|-----------|
+| Product created/updated/deleted | `product.changed` | Products | Baskets, Notifications |
+| Order submitted | `order.submitted` | Orders | Notifications |
+| Basket checked out | `basket.checkedout` | Baskets | (future) |
+
+> [:info]
+> Dot-separated routing keys (`product.changed`) are human-readable and support RabbitMQ's topic wildcard matching (`product.*` matches all product events). This is simpler than header-based routing.
+
+---
+
+### 2. Publisher Contract
+
+#### Definition
+
+`IEventPublisher.PublishAsync<T>(exchange, routingKey, event)` — serializes the event to JSON, creates a channel, injects the W3C traceparent header, and publishes to `amq.topic`.
+
+```csharp
+public interface IEventPublisher
+{
+    Task PublishAsync<T>(string exchange, string routingKey, T @event);
+}
+```
+
+#### Key Design Decisions
+
+- **Channel-per-publish**: Creates a new channel for each publish (no long-lived channel management). Simple, no state to manage.
+- **System.Text.Json serialization**: Built-in, no extra dependencies.
+- **W3C traceparent in headers**: Injects `traceparent` into `IBasicProperties.Headers` for distributed tracing.
+- **Persistent messages**: `props.Persistent = true` — messages survive RabbitMQ restart.
+
+---
+
+### 3. Consumer Contract
+
+#### Definition
+
+`EventConsumer<T>` is an abstract `BackgroundService` that declares a durable queue, binds it to `amq.topic` with a routing key, and processes messages. Subclasses implement `HandleAsync`.
+
+```csharp
+public abstract class EventConsumer<T> : BackgroundService
+{
+    protected abstract string QueueName { get; }
+    protected abstract string RoutingKey { get; }
+    protected abstract Task HandleAsync(T @event, CancellationToken ct);
+}
+```
+
+#### Queue Naming Convention
+
+| Consumer | Queue Name | Routing Key |
+|----------|-----------|-------------|
+| Baskets `ProductChangedConsumer` | `baskets.product-changed` | `product.changed` |
+| Notifications `OrderSubmittedConsumer` | `notifications.order-submitted` | `order.submitted` |
+| Notifications `ProductChangedConsumer` | `notifications.product-changed` | `product.changed` |
+
+> [!tip]
+> Queue names follow `{service}.{event}` convention. Each consumer gets its own queue — so Baskets and Notifications each have their own copy of `ProductChanged` events.
+
+---
+
+### 4. Why Direct RabbitMQ.Client (Not MassTransit)
+
+| Aspect | Direct `RabbitMQ.Client` | MassTransit |
+|--------|--------------------------|-------------|
+| Educational visibility | ✅ You see channels, exchanges, routing keys | ❌ Hidden behind abstractions |
+| Boilerplate | More code | Less code |
+| Saga support | Manual (we built our own) | Built-in |
+| Retries/DLQ | Manual | Built-in |
+| Learning curve | Steeper | Easier |
+
+> [!warning]
+> For a **demo/educational project**, direct `RabbitMQ.Client` is better — you see exactly how RabbitMQ works. For **production**, MassTransit or NServiceBus would handle retries, dead-letter queues, and saga orchestration automatically.
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Exchange | `amq.topic` (built-in) | No need to declare a custom exchange |
+| Routing keys | Dot-separated (`product.changed`) | Human-readable, supports wildcards |
+| Queue durability | Durable | Messages survive RabbitMQ restart |
+| Serialization | `System.Text.Json` | Built-in, no extra dependencies |
+| Traceparent | W3C in message headers | Built in from day one — enables Jaeger tracing |
+| Client library | Direct `RabbitMQ.Client 7.2.2` | Educational visibility — no MassTransit abstraction |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
+- [x] Clean working tree after commit
+
+---
+
+## 📎 See Also
+
+- [[01-scaffold-solution]] — Implementation of the publisher, consumer, and connection
+- [[02-products-service]] — First service to publish events (`ProductChanged`)
+- [[03-baskets-service]] — First service to consume events (`ProductChangedConsumer`)
+- [[06-notifications-service]] — Consumes both `OrderSubmitted` and `ProductChanged`
+- [[09-distributed-tracing]] — OpenTelemetry SDK registration (uses the traceparent infrastructure)
+
+---
+
+## 📝 Artifacts Created
+
+- `tracker/tickets/T03-rabbitmq-contracts-and-connection-design.md` — Resolution section (documentation only, no code changes)
+- `tracker/MAP.md` — T03 marked resolved
 - `docs/project-evolution.md` — T03 marked ✅ Done
-
-## Testing & verification
-
-- [x] `dotnet build EcommerceDemo.slnx` — Build succeeded, 0 warnings, 0 errors
-- [x] `git status --short` — clean working tree after commit (only Obsidian IDE config files remain unstaged, unrelated to this ticket)
-
-```
-dotnet build EcommerceDemo.slnx --nologo -v q
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
-```
-
-## Dependencies
-
-- **Blocked by:** [[01-scaffold-solution]] (T01 — scaffold created the Contracts project)
-- **Unblocks:** [[05-orders-service]] (Orders service), [[06-notifications-service]] (Notifications service), [[07-bff-service]] (BFF routing)
-
-## Notes for presentation
-
-- This is a decision ticket, not an implementation ticket — the code was already written during T01
-- The key value is documenting the design so downstream tickets have a clear contract to build against
-- The `amq.topic` exchange + dot-separated routing keys pattern is simple and extensible
-- Distributed tracing (W3C traceparent injection/extraction) is built into the publisher and consumer from the start, making T10 (OpenTelemetry + Jaeger) straightforward
-- Show the Contracts project structure and the Resolution section in the T03 ticket
-
-## Next steps
-
-All downstream tickets have been completed:
-- [[02-products-service]] — Products service (done)
-- [[03-baskets-service]] — Baskets service (done)
-- [[04-identity-service]] — Identity service (done)
-- [[05-orders-service]] — Orders service (done)
-- [[06-notifications-service]] — Notifications service (done)
-- [[09-distributed-tracing]] — Distributed tracing (done, uses the traceparent infrastructure from T01)

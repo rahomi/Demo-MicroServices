@@ -6,38 +6,47 @@ date_completed: "2026-09-11"
 status: "completed"
 blocked_by: ["7"]
 blocks: ["10", "11"]
-tags: [ticket-completion]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# Ticket 8 — Saga Pattern: Orchestration-Based Checkout with Compensating Transactions
+# 🔄 Saga Pattern: Orchestration-Based Checkout with Compensating Transactions
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> The synchronous checkout (Ticket 7) has a fatal flaw: if Baskets succeeds but Orders fails, the basket is cleared with no order created. The **saga pattern** fixes this by tracking state, executing steps in order, and running **compensating transactions** in reverse on failure. This note shows the code diff from synchronous → saga, the state machine, and the compensation flow.
 
-Replaced the BFF's simple synchronous checkout with an orchestration-based saga that tracks state, executes steps in order, and runs compensating transactions on failure. The saga persists state in a dedicated `SagaDbContext` (EF Core InMemory), captures a basket snapshot at checkout for compensation, and logs every state transition for educational visibility. On failure (e.g., Orders service down), the saga restores basket items and cancels the order — all visible via `GET /api/sagas/{id}` and `docker compose logs`.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- **Baskets service — compensating action:**
-  - Added `RestoreBasketCommand` + `RestoreBasketHandler` that re-adds items to a customer's basket from a snapshot
-  - Added `POST /api/baskets/{customerId}/restore` endpoint
-- **Orders service — compensating action:**
-  - Added `CancelOrderCommand` + `CancelOrderHandler` that sets order status to "Cancelled"
-  - Added `DELETE /api/orders/{id}/cancel` endpoint
-- **BFF service — saga orchestrator:**
-  - Added `SagaStatus` enum: `Started`, `BasketReserved`, `OrderCreated`, `Completed`, `Compensating`, `Failed`
-  - Added `SagaState` model with JSON-serialized basket snapshot, order ID, error message, timestamps
-  - Added `SagaDbContext` (EF Core InMemory, "SagaDb")
-  - Added `CheckoutSagaOrchestrator` with 3-step saga:
-    - Step 1: Checkout basket (captures snapshot for compensation)
-    - Step 2: Create order (stores order ID)
-    - Step 3: Mark saga Completed
-    - On failure: runs compensating actions in reverse (cancel order if created, restore basket items)
-  - Replaced old synchronous checkout endpoint with saga-based `POST /api/baskets/{customerId}/checkout`
-  - Added `GET /api/sagas/{id}` endpoint for saga state inspection
-  - Updated Refit clients with `RestoreBasketAsync` and `CancelOrderAsync` methods
-  - Added `Microsoft.EntityFrameworkCore.InMemory` package to BFF project
+- Understand the **saga orchestration pattern** and why it's needed
+- Implement a **state machine** for checkout (Started → BasketReserved → OrderCreated → Completed)
+- Design **compensating transactions** (cancel order, restore basket items)
+- Persist saga state in a dedicated `SagaDbContext` for observability
+- Capture a **basket snapshot** at checkout for compensation
 
-## Saga state machine
+---
+
+## 🧩 Main Concepts
+
+### 1. The Saga Pattern
+
+#### Definition
+
+A **saga** is a sequence of local transactions where each step has a **compensating transaction** that undoes its effects. If any step fails, the saga runs compensating actions in reverse order to restore the system to a consistent state.
+
+#### Why It Exists
+
+In a distributed system, you can't use a database transaction across services. If Baskets clears the basket and Orders fails to create the order, there's no automatic rollback. The saga pattern provides **application-level compensation** instead.
+
+#### Problem It Solves
+
+Data inconsistency from partial failures. Without a saga, the BFF's synchronous checkout leaves the basket cleared but no order created when Orders is down.
+
+---
+
+### 2. Saga State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -53,58 +62,208 @@ stateDiagram-v2
     Failed --> [*]
 ```
 
-## Key decisions
+#### State Definitions
 
-- **Enum renamed to `SagaStatus`:** The original plan called for a `SagaState` enum, but we also needed a `SagaState` entity class. To avoid the naming conflict, the enum was renamed to `SagaStatus` while the entity remains `SagaState`.
-- **Basket snapshot as JSON:** The basket items captured at checkout are serialized to JSON in the `SagaState.BasketSnapshotJson` field. This keeps the saga state self-contained and queryable without joins.
-- **Compensation is best-effort:** If a compensating action itself fails (e.g., Baskets service also down), the saga logs the error and still marks itself as Failed. This is intentional for the demo — production systems would need retry/dead-letter queues.
-- **Saga state stored in BFF:** The `SagaDbContext` lives in the BFF service, not in a separate saga service. This keeps the demo architecture simple while still demonstrating the orchestration pattern.
+| State | Meaning |
+|-------|---------|
+| `Started` | Saga created, about to checkout basket |
+| `BasketReserved` | Basket checked out, items captured as snapshot |
+| `OrderCreated` | Order submitted successfully |
+| `Completed` | All steps done, saga succeeded |
+| `Compensating` | A step failed, running compensating actions in reverse |
+| `Failed` | Compensation complete (or compensation itself failed) |
 
-## Artifacts created
+---
 
-- `EcommerceDemo/Baskets/Features/Commands/RestoreBasket.cs` — RestoreBasketCommand + handler (compensating action)
-- `EcommerceDemo/Orders/Features/Commands/CancelOrder.cs` — CancelOrderCommand + handler (compensating action)
-- `EcommerceDemo/BFF/Saga/SagaState.cs` — SagaStatus enum, SagaState entity, BasketItemSnapshot record
-- `EcommerceDemo/BFF/Saga/SagaDbContext.cs` — EF Core InMemory DbContext for saga state
-- `EcommerceDemo/BFF/Saga/CheckoutSagaOrchestrator.cs` — 3-step saga orchestrator with compensation
+### 3. Code Diff: Synchronous Checkout vs Saga
 
-## Artifacts modified
+**Before (synchronous — Ticket 7):**
 
-- `EcommerceDemo/Baskets/Program.cs` — Added `POST /api/baskets/{customerId}/restore` endpoint
-- `EcommerceDemo/Orders/Program.cs` — Added `DELETE /api/orders/{id}/cancel` endpoint
-- `EcommerceDemo/BFF/Program.cs` — Registered SagaDbContext + orchestrator, replaced checkout endpoint, added saga inspection endpoint
-- `EcommerceDemo/BFF/Clients/IDownstreamClients.cs` — Added RestoreBasketAsync, CancelOrderAsync, RestoreBasketItemRequest DTO
-- `EcommerceDemo/BFF/BFF.csproj` — Added Microsoft.EntityFrameworkCore.InMemory package
-
-## Testing & verification
-
-- [x] `dotnet build EcommerceDemo.slnx` succeeds with zero errors and zero warnings
-
-```
-dotnet build EcommerceDemo.slnx
-Build succeeded in 2.3s
+```csharp
+// ❌ No state tracking, no compensation
+app.MapPost("/api/baskets/{customerId}/checkout", async (string customerId, IBasketsClient baskets, IOrdersClient orders) =>
+{
+    var items = await baskets.CheckoutAsync(customerId);  // Basket cleared
+    var order = await orders.SubmitOrderAsync(items);     // If this fails → basket lost!
+    return Results.Ok(new { order, items });
+});
 ```
 
+**After (saga — Ticket 8):**
+
+```csharp
+// ✅ State tracked, compensation on failure
+app.MapPost("/api/baskets/{customerId}/checkout", async (string customerId, CheckoutSagaOrchestrator saga) =>
+{
+    var sagaId = await saga.StartAsync(customerId);
+    return Results.Ok(new { sagaId, status = "Started" });
+});
+
+// CheckoutSagaOrchestrator
+public class CheckoutSagaOrchestrator
+{
+    public async Task<Guid> StartAsync(string customerId)
+    {
+        var state = new SagaState
+        {
+            Id = Guid.NewGuid(),
+            CustomerId = customerId,
+            Status = SagaStatus.Started,
+            StartedAt = DateTime.UtcNow
+        };
+        _db.Sagas.Add(state);
+        await _db.SaveChangesAsync();
+
+        await ExecuteStep1Async(state);  // Basket checkout
+        if (state.Status == SagaStatus.BasketReserved)
+            await ExecuteStep2Async(state);  // Create order
+        if (state.Status == SagaStatus.OrderCreated)
+            await ExecuteStep3Async(state);  // Mark completed
+
+        if (state.Status == SagaStatus.Compensating)
+            await CompensateAsync(state);
+
+        return state.Id;
+    }
+}
+```
+
+---
+
+### 4. Compensating Transactions
+
+#### Definition
+
+A **compensating transaction** undoes the effect of a completed step. If the order was created but step 3 fails, the saga cancels the order and restores basket items.
+
+#### Compensation Flow
+
+```mermaid
+flowchart TD
+    Fail["Step fails"] --> Check1{"Order created?"}
+    Check1 -->|"Yes"| Cancel["Cancel order\n(DELETE /api/orders/{id}/cancel)"]
+    Check1 -->|"No"| Skip1["Skip order cancel"]
+    Cancel --> Check2{"Basket reserved?"}
+    Skip1 --> Check2
+    Check2 -->|"Yes"| Restore["Restore basket items\n(POST /api/baskets/{id}/restore)"]
+    Check2 -->|"No"| Skip2["Skip basket restore"]
+    Restore --> MarkFailed["Mark saga Failed"]
+    Skip2 --> MarkFailed
+```
+
+#### Implementation
+
+```csharp
+private async Task CompensateAsync(SagaState state)
+{
+    state.Status = SagaStatus.Compensating;
+    state.ErrorMessage = "Step failed, compensating...";
+
+    // Reverse order: cancel order first (if created), then restore basket
+    if (state.OrderId is not null)
+    {
+        try { await _orders.CancelOrderAsync(state.OrderId.Value); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Order cancel failed"); }
+    }
+
+    if (state.BasketSnapshotJson is not null)
+    {
+        try { await _baskets.RestoreBasketAsync(state.CustomerId, snapshot); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Basket restore failed"); }
+    }
+
+    state.Status = SagaStatus.Failed;
+    state.CompletedAt = DateTime.UtcNow;
+    await _db.SaveChangesAsync();
+}
+```
+
+> [!warning]
+> Compensation is **best-effort**. If a compensating action itself fails (e.g., Baskets service also down), the saga logs the error and still marks itself as Failed. Production systems would need retry/dead-letter queues.
+
+---
+
+### 5. Basket Snapshot for Compensation
+
+#### Definition
+
+When the saga checks out the basket, it captures a **JSON snapshot** of the basket items. This snapshot is used to restore the basket if compensation is needed.
+
+```csharp
+// In SagaState entity
+public string? BasketSnapshotJson { get; set; }
+
+// At checkout time
+state.BasketSnapshotJson = JsonSerializer.Serialize(items);
+```
+
+> [!tip]
+> The snapshot keeps the saga state **self-contained** — no need to query the Baskets service during compensation. The items are already in the saga's own database.
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Add compensating actions to downstream services
+- Baskets: `POST /api/baskets/{customerId}/restore` (re-adds items from snapshot)
+- Orders: `DELETE /api/orders/{id}/cancel` (sets status to "Cancelled")
+
+### Step 2 — Create saga state model
+`SagaState` entity (Id, CustomerId, Status, BasketSnapshotJson, OrderId, ErrorMessage, timestamps) + `SagaStatus` enum
+
+### Step 3 — Create SagaDbContext
+EF Core InMemory, `DbSet<SagaState>`
+
+### Step 4 — Create CheckoutSagaOrchestrator
+3-step saga with compensation on failure
+
+### Step 5 — Replace BFF checkout endpoint
+`POST /api/baskets/{customerId}/checkout` now starts the saga
+
+### Step 6 — Add saga inspection endpoint
+`GET /api/sagas/{id}` — returns saga state with snapshot for debugging
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Enum name | `SagaStatus` (not `SagaState`) | Avoids collision with `SagaState` entity class |
+| Basket snapshot | JSON in saga DB | Self-contained, no re-query needed during compensation |
+| Compensation | Best-effort | If compensation fails, log and mark Failed |
+| Saga DB location | In BFF service | Keeps demo simple — no separate saga service |
+| State persistence | EF Core InMemory | Demo only — production would use SQL Server/PostgreSQL |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 errors, 0 warnings
 - [x] Full stack verification (Docker Compose with saga failure simulation) — verified in [[10-docker-compose]]
 
-## Dependencies
+---
 
-- **Blocked by:** [[07-bff-service]] (BFF: Refit clients + routing map + checkout orchestration)
-- **Unblocks:** [[10-docker-compose]] (Docker Compose — needs saga endpoints), [[11-http-examples-and-readme]] (HTTP examples + README — needs saga documentation)
+## 📎 See Also
 
-> The saga depends on the BFF's Refit clients ([[07-bff-service]]), the Baskets restore endpoint ([[03-baskets-service]]), and the Orders cancel endpoint ([[05-orders-service]]).
+- [[07-bff-service]] — Synchronous checkout (the "before" that saga replaces)
+- [[03-baskets-service]] — Basket restore endpoint (compensating action)
+- [[05-orders-service]] — Order cancel endpoint (compensating action)
+- [[10-docker-compose]] — Docker Compose for full stack testing
 
-## Notes for presentation
+---
 
-- Walk through the saga state machine: Started → BasketReserved → OrderCreated → Completed
-- Show the compensation flow: stop the Orders container, trigger checkout, show basket restored
-- Use `GET /api/sagas/{id}` to show persisted saga state with basket snapshot
-- Saga state transitions are logged — show `docker compose logs bff | findstr "saga"` for visibility
-- Key talking point: the saga pattern makes failure handling explicit and observable, unlike the old synchronous checkout which left the basket cleared on order creation failure
+## 📝 Artifacts Created
 
-## Next steps
+- `EcommerceDemo/Baskets/Features/Commands/RestoreBasket.cs` — Compensating action
+- `EcommerceDemo/Orders/Features/Commands/CancelOrder.cs` — Compensating action
+- `EcommerceDemo/BFF/Saga/SagaState.cs` — SagaStatus enum + SagaState entity
+- `EcommerceDemo/BFF/Saga/SagaDbContext.cs` — EF Core InMemory for saga state
+- `EcommerceDemo/BFF/Saga/CheckoutSagaOrchestrator.cs` — 3-step saga with compensation
 
-All downstream tickets have been completed:
-- [[09-distributed-tracing]] — Distributed tracing (done)
-- [[10-docker-compose]] — Docker Compose (done)
-- [[11-http-examples-and-readme]] — HTTP examples + README (done)
+## 📝 Artifacts Modified
+
+- `EcommerceDemo/Baskets/Program.cs` — Added restore endpoint
+- `EcommerceDemo/Orders/Program.cs` — Added cancel endpoint
+- `EcommerceDemo/BFF/Program.cs` — Registered SagaDbContext + orchestrator, replaced checkout
+- `EcommerceDemo/BFF/Clients/IDownstreamClients.cs` — Added RestoreBasketAsync, CancelOrderAsync

@@ -1,92 +1,238 @@
 ---
 ticket: "7"
-title: "BFF: Refit clients + routing map + checkout orchestration + error handling + Swagger UI"
+title: "Backend for Frontend: Refit clients + routing map + checkout orchestration"
 type: "task"
 date_completed: "2026-09-10"
 status: "completed"
 blocked_by: ["02-products-service", "03-baskets-service", "04-identity-service", "05-orders-service"]
-blocks: ["Saga pattern: orchestration-based checkout with compensating transactions", "Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger"]
-tags: [ticket-completion]
+blocks: ["08-saga-orchestration", "10-docker-compose"]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# Ticket 7 — BFF: Refit Clients + Routing Map + Checkout Orchestration + Error Handling + Swagger UI
+# 🌐 BFF Service: Backend for Frontend Pattern
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> The BFF (Backend for Frontend) is the **single entry point** for all client requests. It routes to downstream services using **Refit typed HTTP clients**, orchestrates checkout (basket → order), and handles errors gracefully (503 for unreachable services, 502 for partial failures). This note covers the BFF pattern, Refit integration, and the synchronous checkout that motivates the saga pattern.
 
-Built the complete BFF (Backend for Frontend) service with Refit client interfaces for all four downstream services (Products, Baskets, Orders, Identity), a full routing map exposing all endpoints through the BFF on port 5000, checkout orchestration that calls Baskets to checkout and then Orders to create an order, comprehensive error handling (503 for unreachable services, 404 for not found, proper status propagation), and Swagger UI. A user can call any endpoint through the BFF on port 5000 and it routes to the correct downstream service.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Added NuGet packages: `Refit 8.0.0`, `Refit.HttpClientFactory 8.0.0`, `Swashbuckle.AspNetCore 10.2.3`
-- Created Refit client interfaces: `IProductsClient`, `IBasketsClient`, `IOrdersClient`, `IIdentityClient` with all downstream endpoints
-- Created DTOs for all services (ProductDto, BasketDto, OrderDto, CustomerDto, etc.)
-- Registered Refit clients in DI with configurable base addresses from `appsettings.json` (`Downstream:ProductsUrl`, `Downstream:BasketsUrl`, `Downstream:OrdersUrl`, `Downstream:IdentityUrl`)
-- Created full routing map:
-  - Identity: `GET /api/identity/customer`
-  - Products: `GET/POST/PUT/DELETE /api/products...`
-  - Baskets: `GET/POST/DELETE /api/baskets...`
-  - Orders: `GET/POST /api/orders...`
-- Created checkout orchestration: `POST /api/baskets/{customerId}/checkout` → calls Baskets checkout (clears basket, returns items), then calls Orders to submit order from basket items, returns order + checked-out items
-- Added error handling on all proxy endpoints: `Refit.ApiException` → propagate status code, `HttpRequestException` → 503 Service Unavailable with clean JSON problem details
-- Added Swagger UI and OpenAPI specification at `/swagger`
-- Updated `.http` file with example requests for all endpoints
-- Set BFF port to 5000 in `launchSettings.json`
-- Added `Downstream` config section to `appsettings.json` with default localhost URLs
+- Apply the **Backend for Frontend pattern** — a gateway that shields clients from service topology
+- Use **Refit** to auto-generate typed HTTP clients from interfaces
+- Build a **routing map** that proxies all downstream endpoints through one port
+- Implement **error handling** for downstream failures (503/502 with clean JSON)
+- Understand why **synchronous checkout** is fragile (motivates the saga pattern)
 
-## Key decisions
+---
 
-- **Refit for HTTP clients:** Used Refit 8.0.0 with `Refit.HttpClientFactory` for typed HTTP clients. Refit generates the implementation from interface attributes, reducing boilerplate. Base addresses are configurable via `appsettings.json` and environment variables (for Docker Compose).
-- **Error handling with `HandleDownstreamError` helper:** A static helper method maps downstream exceptions to appropriate HTTP responses: `Refit.ApiException` propagates the downstream status code, `HttpRequestException` (service unreachable) returns 503 Service Unavailable. This prevents unhandled exceptions when downstream services are down — important for the saga ticket (Ticket 8) where failure simulation is a key demo feature.
-- **Checkout orchestration is synchronous (for now):** The BFF calls Baskets to checkout, then calls Orders to create an order. This is the simple synchronous checkout — the saga pattern (Ticket 8) will replace this with orchestration-based compensation. The synchronous version is the baseline for comparison.
-- **Checkout error handling:** If Baskets checkout fails → 503/propagate. If Baskets succeeds but Orders fails → 502 Bad Gateway with "manual compensation may be needed" message. This sets up the motivation for the saga pattern.
-- **BFF on port 5000:** The BFF is the single entry point for the demo. Port 5000 is the standard API gateway port, easy to remember.
-- **No RabbitMQ in BFF (for now):** The BFF doesn't use RabbitMQ directly — it orchestrates via HTTP calls. The saga ticket (Ticket 8) may add RabbitMQ for saga events, but the current checkout is purely HTTP-based.
-- **Swashbuckle.AspNetCore for Swagger UI:** Same decision as all other services.
+## 🧩 Main Concepts
 
-## Artifacts created
+### 1. The BFF Pattern
 
-- `EcommerceDemo/BFF/Clients/IDownstreamClients.cs` — Refit client interfaces and all DTOs
-- `EcommerceDemo/BFF/Program.cs` — Full routing map, checkout orchestration, error handling, Swagger UI
-- `EcommerceDemo/BFF/BFF.csproj` — Added Refit, Refit.HttpClientFactory, Swashbuckle.AspNetCore
-- `EcommerceDemo/BFF/appsettings.json` — Added Downstream URLs config section
-- `EcommerceDemo/BFF/Properties/launchSettings.json` — Set port to 5000
-- `EcommerceDemo/BFF/BFF.http` — Full example requests for all endpoints
+#### Definition
 
-## Testing & verification
+A **Backend for Frontend** is a gateway service tailored for a specific UI. Instead of clients calling multiple services directly, they call the BFF, which routes, aggregates, and orchestrates.
 
-- [x] `dotnet build EcommerceDemo.slnx` — Build succeeded, 0 warnings, 0 errors
-- [x] BFF service starts on `http://localhost:5000`
-- [x] Swagger UI accessible at `http://localhost:5000/swagger/index.html` (HTTP 200)
-- [x] `GET /api/identity/customer` — Returns clean 503 JSON (Identity not running — expected)
-- [x] `GET /api/products` — Returns clean 503 JSON (Products not running — expected)
-- [x] Error handling works: downstream unreachable → 503, no unhandled exceptions
-- [x] Refit clients correctly route to configured downstream URLs (confirmed in logs)
-- [x] Full end-to-end test (BFF → downstream services) — verified via Docker Compose in [[10-docker-compose]]
+#### Why It Exists
 
-```
-dotnet build EcommerceDemo.slnx --nologo
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
+Without a BFF, a web client would need to know the URLs of Products, Baskets, Orders, and Identity services. If a service moves or changes port, every client breaks. The BFF centralizes routing.
+
+#### Problem It Solves
+
+Client-to-service coupling. The BFF is the only service the client knows about. Downstream services can be added, removed, or reconfigured without client changes.
+
+```mermaid
+flowchart TD
+    Client["Web/Mobile Client"] -->|"port 5000"| BFF["BFF"]
+    BFF -->|"GET /api/products"| Products["Products:5001"]
+    BFF -->|"GET /api/baskets"| Baskets["Baskets:5002"]
+    BFF -->|"POST /api/orders"| Orders["Orders:5003"]
+    BFF -->|"GET /api/customer"| Identity["Identity:5005"]
 ```
 
-## Dependencies
+---
 
-- **Blocked by:** [[02-products-service]], [[03-baskets-service]], [[04-identity-service]], [[05-orders-service]]
-- **Unblocks:** [[08-saga-orchestration]] (Saga replaces the synchronous checkout), [[10-docker-compose]] (all six services now exist, ready for containerization)
+### 2. Refit Typed HTTP Clients
 
-## Notes for presentation
+#### Definition
 
-- Show the Swagger UI at `/swagger` — all endpoints from all services in one place
-- Demonstrate the routing: call `GET /api/products` through the BFF, show it proxies to Products service
-- Show the error handling: stop a downstream service, call the BFF endpoint, show the clean 503 response
-- Demonstrate checkout orchestration: add items to basket, call checkout, show order created and basket cleared
-- Point out the `Downstream` config section — shows how service URLs are configurable for Docker Compose
-- The checkout error handling (502 "manual compensation may be needed") sets up the motivation for the saga pattern
+**Refit** auto-generates HTTP client implementations from C# interfaces. You define an interface with `[Get]`, `[Post]` attributes, and Refit generates the implementation at runtime.
 
-## Next steps
+#### Code Diff: Manual HttpClient vs Refit
 
-All downstream tickets have been completed:
-- [[08-saga-orchestration]] — Saga pattern (done)
-- [[09-distributed-tracing]] — Distributed tracing (done)
-- [[10-docker-compose]] — Docker Compose (done)
+**Before (manual HttpClient):**
+
+```csharp
+// ❌ Verbose — manual serialization, URL construction, error handling
+using var response = await _httpClient.GetAsync($"$"{_baseUrl}/api/products");
+var json = await response.Content.ReadAsStringAsync();
+var products = JsonSerializer.Deserialize<List<Product>>(json);
+```
+
+**After (Refit interface):**
+
+```csharp
+// ✅ Clean — Refit generates the implementation
+public interface IProductsClient
+{
+    [Get("/api/products")]
+    Task<List<ProductDto>> GetProductsAsync();
+
+    [Get("/api/products/{id}")]
+    Task<ProductDto> GetProductAsync(Guid id);
+
+    [Post("/api/products")]
+    Task<ProductDto> CreateProductAsync([Body] CreateProductDto product);
+}
+```
+
+#### Registration in DI:
+
+```csharp
+builder.Services
+    .AddRefitClient<IProductsClient>()
+    .ConfigureHttpClient(c => c.BaseAddress = new Uri(productsUrl));
+
+builder.Services
+    .AddRefitClient<IBasketsClient>()
+    .ConfigureHttpClient(c => c.BaseAddress = new Uri(basketsUrl));
+```
+
+> [!tip]
+> Base addresses come from `appsettings.json` (`Downstream:ProductsUrl`, etc.). In Docker Compose, these are overridden by environment variables pointing to container names (`http://products:5001`).
+
+---
+
+### 3. Checkout Orchestration (Synchronous)
+
+#### Definition
+
+The BFF orchestrates checkout by calling Baskets (clear basket, get items) then Orders (create order from items). This is **synchronous** — if Orders fails after Baskets succeeds, the basket is already cleared.
+
+#### How It Works
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant BFF
+    participant Baskets
+    participant Orders
+
+    Client->>BFF: POST /api/baskets/{id}/checkout
+    BFF->>Baskets: POST /api/baskets/{id}/checkout
+    Baskets-->>BFF: 200 OK (items, basket cleared)
+    BFF->>Orders: POST /api/orders (items)
+    alt Orders succeeds
+        Orders-->>BFF: 201 Created (order)
+        BFF-->>Client: 200 OK (order + items)
+    else Orders fails
+        Orders-->>BFF: 503 Service Unavailable
+        BFF-->>Client: 502 Bad Gateway ("manual compensation may be needed")
+    end
+```
+
+> [!danger]
+> If Baskets succeeds but Orders fails, the basket is **already cleared** but no order exists. This is the **data inconsistency** that motivates the saga pattern in [[08-saga-orchestration]].
+
+---
+
+### 4. Error Handling
+
+#### Implementation
+
+```csharp
+static IResult HandleDownstreamError(Exception ex)
+{
+    return ex switch
+    {
+        Refit.ApiException apiEx => Results.Json(new
+        {
+            error = "Downstream service error",
+            statusCode = (int)apiEx.StatusCode,
+            detail = apiEx.Content
+        }, statusCode: (int)apiEx.StatusCode),
+
+        HttpRequestException => Results.Json(new
+        {
+            error = "Service Unavailable",
+            detail = "Downstream service is not reachable"
+        }, statusCode: 503),
+
+        _ => Results.Problem("Unexpected error", statusCode: 500)
+    };
+}
+```
+
+> [:info]
+> `Refit.ApiException` propagates the downstream status code (404, 400, etc.). `HttpRequestException` means the service is unreachable → 503. This prevents unhandled exceptions when downstream services are down.
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Add NuGet packages
+Refit 8.0.0, Refit.HttpClientFactory 8.0.0, Swashbuckle.AspNetCore 10.2.3
+
+### Step 2 — Create Refit client interfaces
+`IProductsClient`, `IBasketsClient`, `IOrdersClient`, `IIdentityClient` + all DTOs
+
+### Step 3 — Register Refit clients in DI
+Configure base addresses from `appsettings.json` `Downstream` section
+
+### Step 4 — Create routing map
+Proxy all downstream endpoints through BFF on port 5000:
+```
+GET    /api/identity/customer
+GET    /api/products, GET /api/products/{id}, POST, PUT, DELETE
+GET    /api/baskets/{id}, POST /api/baskets/{id}/items, DELETE, POST checkout
+POST   /api/orders, GET /api/orders/{id}, GET /api/orders?customerId=
+```
+
+### Step 5 — Add error handling
+`HandleDownstreamError` helper on all proxy endpoints
+
+### Step 6 — Add Swagger UI
+All endpoints from all services visible in one Swagger page
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| HTTP client | Refit 8.0.0 | Auto-generates from interfaces, reduces boilerplate |
+| BFF port | 5000 | Standard API gateway port, easy to remember |
+| Checkout | Synchronous (for now) | Baseline for saga comparison — saga replaces this in Ticket 8 |
+| Error handling | `HandleDownstreamError` helper | Prevents unhandled exceptions, clean JSON responses |
+| RabbitMQ | None in BFF | BFF orchestrates via HTTP, not events |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
+- [x] BFF starts on port 5000, Swagger UI accessible
+- [x] Error handling: downstream unreachable → clean 503 JSON
+- [x] Full end-to-end test verified via Docker Compose in [[10-docker-compose]]
+
+---
+
+## 📎 See Also
+
+- [[02-products-service]] — Products endpoints proxied by BFF
+- [[03-baskets-service]] — Baskets endpoints proxied by BFF
+- [[05-orders-service]] — Orders endpoints proxied by BFF
+- [[08-saga-orchestration]] — Saga replaces the synchronous checkout
+- [[10-docker-compose]] — BFF containerized with Docker
+
+---
+
+## 📝 Artifacts Created
+
+- `EcommerceDemo/BFF/Clients/IDownstreamClients.cs` — Refit interfaces + DTOs
+- `EcommerceDemo/BFF/Program.cs` — Routing map, checkout, error handling, Swagger
+- `EcommerceDemo/BFF/appsettings.json` — Downstream URLs config
+- `EcommerceDemo/BFF/BFF.csproj` — Refit, Refit.HttpClientFactory, Swashbuckle

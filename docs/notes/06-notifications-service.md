@@ -1,85 +1,181 @@
 ---
 ticket: "6"
-title: "Notifications service: RabbitMQ consumer + received events endpoint + Swagger UI"
+title: "Event-driven consumer pattern: consuming OrderSubmitted + ProductChanged"
 type: "task"
 date_completed: "2026-09-10"
 status: "completed"
 blocked_by: ["01-scaffold-solution"]
-blocks: ["BFF: Refit clients + routing map + checkout orchestration", "Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger"]
-tags: [ticket-completion]
+blocks: ["07-bff-service", "10-docker-compose"]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# Ticket 6 — Notifications Service: RabbitMQ Consumer + Received Events Endpoint + Swagger UI
+# 🔔 Notifications Service: Event-Driven Consumer Pattern
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> The Notifications service is the **event sink** — it consumes `OrderSubmitted` and `ProductChanged` events from RabbitMQ, stores them in a thread-safe in-memory list, and exposes them via `GET /api/notifications`. It demonstrates the **pub-sub pattern** without a database, without MediatR, and without coupling to any other service.
 
-Built the complete Notifications service that consumes `OrderSubmitted` and `ProductChanged` events from RabbitMQ, stores them in a thread-safe in-memory list, and exposes a `GET /api/notifications` endpoint to view them. Two `EventConsumer<T>` BackgroundServices are registered — one for each event type — that log each received event and store it with timestamp, event type, routing key, and JSON payload. Swagger UI is available at `/swagger`. A user can publish events (via Products or Orders services) and see them appear in the notifications list.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Added NuGet package: `Swashbuckle.AspNetCore 10.2.3`
-- Created `ReceivedEvents` — thread-safe in-memory store using `ConcurrentBag<ReceivedEvent>`, registered as a singleton shared between consumers and the API endpoint
-- Created `ReceivedEvent` record (EventType, RoutingKey, Payload, ReceivedAt)
-- Created `OrderSubmittedConsumer : EventConsumer<OrderSubmitted>` — consumes `order.submitted` events from queue `notifications.order-submitted`, logs order details, stores in `ReceivedEvents`
-- Created `ProductChangedConsumer : EventConsumer<ProductChanged>` — consumes `product.changed` events from queue `notifications.product-changed`, logs product details, stores in `ReceivedEvents`
-- Registered both consumers as `IHostedService` via `AddHostedService`
-- Created `GET /api/notifications` endpoint returning all received events, most recent first
-- Added Swagger UI and OpenAPI specification at `/swagger` with `WithSummary`, `WithDescription`, and `Produces` metadata
-- Updated `.http` file with example request
-- Set service port to 5203 in `launchSettings.json`
+- Build **RabbitMQ event consumers** using the `EventConsumer<T>` base class
+- Use a **thread-safe in-memory store** (`ConcurrentBag<T>`) shared between BackgroundServices and API
+- Understand why Notifications has **no database, no MediatR** — intentionally simple
+- See how **separate queues per event type** give each consumer its own copy of events
 
-## Key decisions
+---
 
-- **Singleton `ReceivedEvents` store:** The in-memory event store is a singleton (`ConcurrentBag<ReceivedEvent>`) shared between the consumer BackgroundServices (which write to it) and the API endpoint (which reads from it). This is intentional for the demo — no database is needed for ephemeral notification tracking.
-- **Separate queues per event type:** Each consumer declares its own queue (`notifications.order-submitted`, `notifications.product-changed`) bound to `amq.topic` with the respective routing key. This means the Notifications service has its own copy of each event, independent of other consumers (e.g., Baskets' `ProductChanged` consumer).
-- **No MediatR:** The Notifications service doesn't use MediatR — it has no commands or queries to handle. The consumers directly write to the `ReceivedEvents` store, and the endpoint directly reads from it. This keeps the service intentionally simple.
-- **No database:** The Notifications service uses an in-memory list, not EF Core InMemory. Events are ephemeral and lost on restart — intentional for a notifications/demo service.
-- **Swashbuckle.AspNetCore for Swagger UI:** Same decision as all other services — used Swashbuckle 10.2.3 for consistency and to avoid deprecation warnings under `TreatWarningsAsErrors`.
-- **Full event flow testing deferred to Docker Compose:** Docker is not installed on the dev machine, so RabbitMQ can't be started locally. Level 1 testing (service starts, endpoint works, consumers start and retry) is sufficient. The full event flow (events actually consumed from RabbitMQ) will be verified during the Docker Compose ticket (Ticket 10).
+## 🧩 Main Concepts
 
-## Artifacts created
+### 1. The Event Sink Pattern
 
-- `EcommerceDemo/Notifications/ReceivedEvents.cs` — Thread-safe in-memory store and ReceivedEvent record
-- `EcommerceDemo/Notifications/Consumers/OrderSubmittedConsumer.cs` — RabbitMQ consumer for OrderSubmitted events
-- `EcommerceDemo/Notifications/Consumers/ProductChangedConsumer.cs` — RabbitMQ consumer for ProductChanged events
-- `EcommerceDemo/Notifications/Program.cs` — Updated with RabbitMQ, consumers, ReceivedEvents singleton, Swagger UI, and GET /api/notifications endpoint
-- `EcommerceDemo/Notifications/Notifications.csproj` — Added Swashbuckle.AspNetCore package
-- `EcommerceDemo/Notifications/Properties/launchSettings.json` — Set port to 5203
-- `EcommerceDemo/Notifications/Notifications.http` — Updated with example request
+#### Definition
 
-## Testing & verification
+An **event sink** is a service that subscribes to events and stores/processes them. The Notifications service is the simplest form — it just records every event with a timestamp and makes them queryable.
 
-- [x] `dotnet build EcommerceDemo.slnx` — Build succeeded, 0 warnings, 0 errors
-- [x] Service starts on `http://localhost:5203`
-- [x] `GET /api/notifications` — Returns `[]` (empty list, expected — no RabbitMQ running) (200 OK)
-- [x] Swagger UI accessible at `http://localhost:5203/swagger/index.html` (HTTP 200)
+#### Why It Exists
+
+In an event-driven architecture, services publish events without knowing who consumes them. The Notifications service is the **observable consumer** — it proves events are flowing through the system and provides a single endpoint to inspect all events.
+
+#### How It Works
+
+```mermaid
+flowchart TB
+    Products["Products Service"] -->|"product.changed"| Exchange["amq.topic"]
+    Orders["Orders Service"] -->|"order.submitted"| Exchange
+
+    Exchange -->|"product.changed"| Queue1["notifications.product-changed"]
+    Exchange -->|"order.submitted"| Queue2["notifications.order-submitted"]
+
+    Queue1 --> Consumer1["ProductChangedConsumer"]
+    Queue2 --> Consumer2["OrderSubmittedConsumer"]
+
+    Consumer1 --> Store["ReceivedEvents\n(ConcurrentBag)"]
+    Consumer2 --> Store
+
+    Store --> API["GET /api/notifications"]
+```
+
+> [!info]
+> Each consumer declares its **own queue** bound to `amq.topic`. This means Notifications gets its own copy of `ProductChanged` — independent of Baskets' `ProductChanged` consumer. This is the pub-sub advantage: multiple independent consumers.
+
+---
+
+### 2. Thread-Safe In-Memory Store
+
+#### Definition
+
+`ReceivedEvents` is a singleton `ConcurrentBag<ReceivedEvent>` shared between the consumer BackgroundServices (writers) and the API endpoint (reader).
+
+#### Implementation
+
+```csharp
+public record ReceivedEvent(string EventType, string RoutingKey, string Payload, DateTime ReceivedAt);
+
+public class ReceivedEvents
+{
+    private readonly ConcurrentBag<ReceivedEvent> _events = new();
+
+    public void Add(ReceivedEvent evt) => _events.Add(evt);
+    public IEnumerable<ReceivedEvent> GetAll() => _events.OrderByDescending(e => e.ReceivedAt);
+}
+```
+
+> [:tip]
+> `ConcurrentBag<T>` is thread-safe by design. Multiple BackgroundServices can write concurrently while the API reads — no locks needed.
+
+---
+
+### 3. Event Consumers
+
+#### Implementation
+
+```csharp
+public class OrderSubmittedConsumer : EventConsumer<OrderSubmitted>
+{
+    protected override string QueueName => "notifications.order-submitted";
+    protected override string RoutingKey => "order.submitted";
+
+    protected override Task HandleAsync(OrderSubmitted evt, CancellationToken ct)
+    {
+        _logger.LogInformation("Received OrderSubmitted: OrderId={OrderId}, Total={Total}",
+            evt.OrderId, evt.Total);
+
+        _events.Add(new ReceivedEvent(
+            EventType: "OrderSubmitted",
+            RoutingKey: "order.submitted",
+            Payload: JsonSerializer.Serialize(evt),
+            ReceivedAt: DateTime.UtcNow));
+
+        return Task.CompletedTask;
+    }
+}
+```
+
+> [!info]
+> No MediatR here. The consumers directly write to `ReceivedEvents`, and the endpoint directly reads from it. This keeps the service intentionally simple — no command/query separation needed for a single-endpoint service.
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Add Swashbuckle.AspNetCore
+Only package needed (Contracts provides RabbitMQ infrastructure transitively)
+
+### Step 2 — Create ReceivedEvents store
+`ConcurrentBag<ReceivedEvent>` singleton, registered in DI
+
+### Step 3 — Create two consumers
+- `OrderSubmittedConsumer` — queue `notifications.order-submitted`, routing key `order.submitted`
+- `ProductChangedConsumer` — queue `notifications.product-changed`, routing key `product.changed`
+
+### Step 4 — Register consumers as BackgroundServices
+```csharp
+builder.Services.AddHostedService<OrderSubmittedConsumer>();
+builder.Services.AddHostedService<ProductChangedConsumer>();
+```
+
+### Step 5 — Create endpoint
+```
+GET /api/notifications — returns all received events, most recent first
+```
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Database | None (in-memory `ConcurrentBag`) | Events are ephemeral — no persistence needed |
+| MediatR | None | Single endpoint, no command/query separation needed |
+| Queue strategy | Separate queue per event type | Each consumer gets its own copy of events |
+| Store lifetime | Singleton | Shared between BackgroundServices (writers) and API (reader) |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
+- [x] `GET /api/notifications` returns `[]` (empty — no RabbitMQ running locally)
 - [x] Both consumers registered as BackgroundServices, start on startup, retry RabbitMQ connection every 5s
-- [x] Full event flow test (events consumed from RabbitMQ) — verified via Docker Compose in [[10-docker-compose]]
+- [x] Full event flow verified via Docker Compose in [[10-docker-compose]]
 
-```
-dotnet build EcommerceDemo.slnx --nologo
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
-```
+---
 
-## Dependencies
+## 📎 See Also
 
-- **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** [[07-bff-service]] (full stack needs all services), [[10-docker-compose]] (all services must exist before Docker Compose)
+- [[01-scaffold-solution]] — `EventConsumer<T>` base class
+- [[02-products-service]] — Publishes `ProductChanged` consumed here
+- [[05-orders-service]] — Publishes `OrderSubmitted` consumed here
+- [[10-docker-compose]] — Full event flow verified with Docker Compose
 
-## Notes for presentation
+---
 
-- Show the Swagger UI at `/swagger` — simple single-endpoint API
-- Explain the event-driven architecture: Products publishes `ProductChanged`, Orders publishes `OrderSubmitted`, Notifications consumes both — no direct coupling between services
-- Show the service logs — consumer startup messages and RabbitMQ connection retries demonstrate the messaging integration
-- During Docker Compose demo: trigger a product create and an order submit, then call `GET /api/notifications` to see both events appear with timestamps
-- Point out that each service has its own queue — Notifications gets its own copy of `ProductChanged` independent of Baskets
-- The in-memory store resets on restart — intentional for ephemeral notifications
+## 📝 Artifacts Created
 
-## Next steps
-
-All downstream tickets have been completed:
-- [[07-bff-service]] — BFF (done)
-- [[08-saga-orchestration]] — Saga pattern (done)
-- [[10-docker-compose]] — Docker Compose (done)
+- `EcommerceDemo/Notifications/ReceivedEvents.cs` — Thread-safe store + ReceivedEvent record
+- `EcommerceDemo/Notifications/Consumers/OrderSubmittedConsumer.cs` — RabbitMQ consumer
+- `EcommerceDemo/Notifications/Consumers/ProductChangedConsumer.cs` — RabbitMQ consumer
+- `EcommerceDemo/Notifications/Program.cs` — Consumers, ReceivedEvents, Swagger, endpoint

@@ -1,95 +1,300 @@
 ---
 ticket: "3"
-title: "Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut event + ProductChanged consumer + Swagger UI"
+title: "Basket operations + Event Consumer + EF Core change tracking"
 type: "task"
 date_completed: "2026-09-10"
 status: "completed"
 blocked_by: ["01-scaffold-solution"]
-blocks: ["BFF: Refit clients + routing map + checkout orchestration"]
-tags: [ticket-completion]
+blocks: ["07-bff-service", "08-saga-orchestration"]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# Ticket 3 — Baskets Service: MediatR CQRS + EF Core InMemory + Basket Ops + BasketCheckedOut + ProductChanged Consumer + Swagger UI
+# 🛒 Baskets Service: Basket Ops + Event Consumer + EF Core Gotchas
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> The Baskets service manages shopping baskets with add/remove/checkout operations. It demonstrates **event-driven architecture** by consuming `ProductChanged` events to keep basket item names/prices in sync, and reveals a critical **EF Core InMemory change tracking gotcha** that required a design pivot.
 
-Built the complete Baskets service with MediatR command/query handlers, EF Core InMemory database, basket item add/remove endpoints, a checkout endpoint that clears the basket and publishes `BasketCheckedOut`, a `ProductChanged` event consumer that keeps basket item names/prices in sync with the Products service, and Swagger UI with OpenAPI specification. A user can create a basket, add items, remove items, and checkout — with `BasketCheckedOut` published to RabbitMQ and `ProductChanged` events consumed to update basket items.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Added NuGet packages: `MediatR 14.2.0`, `Microsoft.EntityFrameworkCore.InMemory 10.0.12`, `Swashbuckle.AspNetCore 10.2.3`
-- Created `Basket` and `BasketItem` domain models (Basket: Id, CustomerId, Items; BasketItem: Id, BasketId, ProductId, ProductName, UnitPrice, Quantity)
-- Created `BasketDbContext : DbContext` with `DbSet<Basket>` and `DbSet<BasketItem>` using `UseInMemoryDatabase("BasketsDb")`
-- Created MediatR query handler: `GetBasketQuery` (by customer ID)
-- Created MediatR command handlers: `AddBasketItemCommand`, `RemoveBasketItemCommand`, `CheckoutBasketCommand`
-- `AddBasketItemCommand` creates the basket if it doesn't exist, increases quantity if the product is already in the basket, or adds a new line item
-- `CheckoutBasketCommand` clears the basket items and publishes a `BasketCheckedOut` event via `IEventPublisher` (best-effort with graceful degradation when RabbitMQ is unavailable)
-- Created `ProductChangedConsumer : EventConsumer<ProductChanged>` — a BackgroundService that consumes `product.changed` events from RabbitMQ and updates basket item names/prices (or removes items for deleted products)
-- Created Minimal API endpoints: `GET /api/baskets/{customerId}`, `POST /api/baskets/{customerId}/items`, `DELETE /api/baskets/{customerId}/items/{productId}`, `POST /api/baskets/{customerId}/checkout`
-- Added Swagger UI and OpenAPI specification at `/swagger` with `WithSummary`, `WithDescription`, and `Produces` metadata on each endpoint
-- Updated `.http` file with example requests for all endpoints
+- Implement basket operations (add, remove, checkout) with MediatR CQRS
+- Build a **RabbitMQ event consumer** that reacts to `ProductChanged` events
+- Understand the **EF Core InMemory `DbUpdateConcurrencyException`** trap and how to avoid it
+- Use scoped `DbContext` in a singleton `BackgroundService` (avoiding captive dependencies)
 
-## Key decisions
+---
 
-- **Explicit `BasketId` FK on `BasketItem`:** Initially used a shadow foreign key (`HasForeignKey("BasketId")`), but EF Core InMemory threw `DbUpdateConcurrencyException` when adding items to a basket after items had been removed/cleared (e.g., after checkout). Switched to an explicit `BasketId` property on `BasketItem` to avoid the change tracking issue.
-- **Query `BasketItems` DbSet directly instead of `Include`:** The `Include(b => b.Items)` navigation with `basket.Items.Add()` / `basket.Items.Clear()` caused `DbUpdateConcurrencyException` in EF Core InMemory when the same basket was modified across multiple requests. All handlers now query the `BasketItems` DbSet directly for add/remove/checkout operations, only using `Include` for read-only return values.
-- **Best-effort event publishing:** The `CheckoutBasketCommand` handler wraps `IEventPublisher.PublishAsync` in try-catch with a warning log, matching the Products service pattern. This allows the service to function locally without RabbitMQ running.
-- **`ProductChangedConsumer` uses scoped `DbContext`:** The consumer is a singleton `IHostedService` but creates a DI scope per message to resolve `BasketDbContext` (scoped service), avoiding captive dependency issues.
-- **Swashbuckle.AspNetCore for Swagger UI:** Same decision as Products service — used Swashbuckle 10.2.3 instead of `Microsoft.AspNetCore.OpenApi` to avoid deprecation warnings under `TreatWarningsAsErrors`.
+## 🧩 Main Concepts
 
-## Artifacts created
+### 1. Basket Operations with MediatR
 
-- `EcommerceDemo/Baskets/Domain/Basket.cs` — Basket and BasketItem entity models
+#### Definition
+
+Basket operations follow the same CQRS pattern as Products — queries for reads, commands for writes. The key difference is that baskets are **per-customer** and items can be added incrementally.
+
+#### How It Works
+
+```mermaid
+flowchart TD
+    Add["POST /api/baskets/{customerId}/items"] --> Check{"Basket exists?"}
+    Check -->|"No"| Create["Create basket"]
+    Check -->|"Yes"| CheckItem{"Product already in basket?"}
+    Create --> CheckItem
+    CheckItem -->|"Yes"| IncQty["Increase quantity"]
+    CheckItem -->|"No"| AddItem["Add new line item"]
+    IncQty --> Save["SaveChanges"]
+    AddItem --> Save
+```
+
+#### Implementation
+
+```csharp
+public class AddBasketItemHandler : IRequestHandler<AddBasketItemCommand, Basket>
+{
+    public async Task<Basket> Handle(AddBasketItemCommand cmd, CancellationToken ct)
+    {
+        // Query BasketItems directly (not Include) to avoid change tracking issues
+        var basket = await _db.Baskets
+            .FirstOrDefaultAsync(b => b.CustomerId == cmd.CustomerId, ct);
+
+        if (basket is null)
+        {
+            basket = new Basket { CustomerId = cmd.CustomerId };
+            _db.Baskets.Add(basket);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        var existingItem = await _db.BasketItems
+            .FirstOrDefaultAsync(i => i.BasketId == basket.Id && i.ProductId == cmd.ProductId, ct);
+
+        if (existingItem is not null)
+            existingItem.Quantity += cmd.Quantity;
+        else
+            _db.BasketItems.Add(new BasketItem
+            {
+                BasketId = basket.Id,
+                ProductId = cmd.ProductId,
+                ProductName = cmd.ProductName,
+                UnitPrice = cmd.UnitPrice,
+                Quantity = cmd.Quantity
+            });
+
+        await _db.SaveChangesAsync(ct);
+        return basket;
+    }
+}
+```
+
+---
+
+### 2. The EF Core InMemory Change Tracking Trap
+
+#### Problem
+
+> [!danger]
+> Using `Include(b => b.Items)` with `basket.Items.Add()` or `basket.Items.Clear()` across multiple requests causes `DbUpdateConcurrencyException` in EF Core InMemory.
+
+#### What Happened
+
+The original code used navigation properties:
+
+```csharp
+// ❌ BROKEN — causes DbUpdateConcurrencyException
+var basket = await _db.Baskets.Include(b => b.Items)
+    .FirstOrDefaultAsync(b => b.CustomerId == customerId);
+
+basket.Items.Clear();  // Throws after checkout + re-add cycle
+```
+
+#### Root Cause
+
+EF Core InMemory's change tracker doesn't handle navigation collection mutations well across multiple requests on the same `DbContext` scope. After clearing items and re-adding, the tracker gets confused about entity state.
+
+#### Fix: Query DbSet Directly
+
+```csharp
+// ✅ WORKS — query BasketItems DbSet directly
+var basket = await _db.Baskets
+    .FirstOrDefaultAsync(b => b.CustomerId == customerId);
+
+var items = await _db.BasketItems
+    .Where(i => i.BasketId == basket.Id)
+    .ToListAsync();
+
+_db.BasketItems.RemoveRange(items);
+await _db.SaveChangesAsync();
+```
+
+> [!tip]
+> Also switched from a shadow foreign key (`HasForeignKey("BasketId")`) to an **explicit `BasketId` property** on `BasketItem`. This gives EF Core a concrete property to track instead of a shadow state.
+
+---
+
+### 3. Event Consumer: Reacting to ProductChanged
+
+#### Definition
+
+The `ProductChangedConsumer` is a `BackgroundService` that listens for `product.changed` events from RabbitMQ and updates basket items to reflect product changes (name, price) or removes items for deleted products.
+
+#### How It Works
+
+```mermaid
+flowchart LR
+    Products["Products Service"] -->|"publishes"| Exchange["amq.topic"]
+    Exchange -->|"product.changed"| Queue["baskets.product-changed queue"]
+    Queue --> Consumer["ProductChangedConsumer"]
+    Consumer --> Update{"ChangeType?"}
+    Update -->|"created/updated"| Sync["Update name + price"]
+    Update -->|"deleted"| Remove["Remove item from baskets"]
+```
+
+#### Implementation
+
+```csharp
+public class ProductChangedConsumer : EventConsumer<ProductChanged>
+{
+    protected override string QueueName => "baskets.product-changed";
+    protected override string RoutingKey => "product.changed";
+
+    protected override async Task HandleAsync(ProductChanged evt, CancellationToken ct)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BasketDbContext>();
+
+        var items = await db.BasketItems
+            .Where(i => i.ProductId == evt.ProductId)
+            .ToListAsync(ct);
+
+        if (evt.ChangeType == "deleted")
+        {
+            db.BasketItems.RemoveRange(items);
+        }
+        else
+        {
+            foreach (var item in items)
+            {
+                item.ProductName = evt.Name;
+                item.UnitPrice = evt.Price;
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+}
+```
+
+> [!warning]
+> The consumer is a **singleton** `IHostedService`, but `BasketDbContext` is **scoped**. The consumer must create a DI scope per message (`_serviceProvider.CreateScope()`) to avoid the captive dependency anti-pattern.
+
+---
+
+### 4. Checkout: Clear Basket + Publish Event
+
+#### Implementation
+
+```csharp
+public class CheckoutBasketHandler : IRequestHandler<CheckoutBasketCommand, BasketCheckedOut>
+{
+    public async Task<BasketCheckedOut> Handle(CheckoutBasketCommand cmd, CancellationToken ct)
+    {
+        var items = await _db.BasketItems
+            .Where(i => i.Basket.CustomerId == cmd.CustomerId)
+            .ToListAsync(ct);
+
+        var evt = new BasketCheckedOut(cmd.CustomerId, items.Select(i => 
+            new BasketItemDto(i.ProductId, i.ProductName, i.UnitPrice, i.Quantity)).ToList(),
+            DateTime.UtcNow);
+
+        // Clear the basket
+        _db.BasketItems.RemoveRange(items);
+        await _db.SaveChangesAsync(ct);
+
+        // Best-effort event publish
+        try
+        {
+            await _publisher.PublishAsync("amq.topic", "basket.checkedout", evt);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "RabbitMQ unavailable — event not published");
+        }
+
+        return evt;
+    }
+}
+```
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Add NuGet packages
+MediatR 14.2.0, EF Core InMemory 10.0.12, Swashbuckle 10.2.3
+
+### Step 2 — Create domain models
+`Basket` (Id, CustomerId) + `BasketItem` (Id, BasketId, ProductId, ProductName, UnitPrice, Quantity)
+
+### Step 3 — Create DbContext with explicit FK
+```csharp
+modelBuilder.Entity<BasketItem>()
+    .HasOne<Basket>()
+    .WithMany()
+    .HasForeignKey(i => i.BasketId);  // Explicit FK property
+```
+
+### Step 4 — Create MediatR handlers
+- Query: `GetBasketQuery`
+- Commands: `AddBasketItemCommand`, `RemoveBasketItemCommand`, `CheckoutBasketCommand`
+
+### Step 5 — Create ProductChangedConsumer
+Extends `EventConsumer<ProductChanged>`, creates scoped `DbContext` per message
+
+### Step 6 — Create Minimal API endpoints
+```
+GET    /api/baskets/{customerId}                  — get basket
+POST   /api/baskets/{customerId}/items             — add item
+DELETE /api/baskets/{customerId}/items/{productId} — remove item
+POST   /api/baskets/{customerId}/checkout          — checkout (clears basket, publishes event)
+```
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Explicit `BasketId` FK | Property on entity | Avoids EF Core InMemory `DbUpdateConcurrencyException` |
+| Query `BasketItems` directly | Instead of `Include` | Navigation collection mutations break InMemory change tracker |
+| Scoped DbContext in consumer | `CreateScope()` per message | Avoids captive dependency in singleton BackgroundService |
+| Best-effort event publishing | try-catch with warning | Service runs locally without RabbitMQ |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
+- [x] Full basket lifecycle: add items, remove item, checkout, verify empty
+- [x] Swagger UI accessible at `/swagger`
+- [x] `ProductChanged` consumer registered as BackgroundService, starts on startup
+
+---
+
+## 📎 See Also
+
+- [[01-scaffold-solution]] — `EventConsumer<T>` base class
+- [[02-products-service]] — Publishes `ProductChanged` events consumed here
+- [[07-bff-service]] — BFF proxies basket endpoints
+- [[08-saga-orchestration]] — Saga uses basket checkout + restore endpoints
+
+---
+
+## 📝 Artifacts Created
+
+- `EcommerceDemo/Baskets/Domain/Basket.cs` — Basket + BasketItem models
 - `EcommerceDemo/Baskets/Data/BasketDbContext.cs` — EF Core InMemory DbContext
-- `EcommerceDemo/Baskets/Features/Queries/GetBasket.cs` — GetBasket query handler
-- `EcommerceDemo/Baskets/Features/Commands/BasketCommands.cs` — AddBasketItem, RemoveBasketItem, CheckoutBasket command handlers with BasketCheckedOut event publishing
-- `EcommerceDemo/Baskets/Features/Consumers/ProductChangedConsumer.cs` — RabbitMQ consumer for ProductChanged events
-- `EcommerceDemo/Baskets/Program.cs` — Updated with MediatR, EF Core, RabbitMQ, ProductChanged consumer, Swagger UI, and all Minimal API endpoints
-- `EcommerceDemo/Baskets/Baskets.csproj` — Added MediatR, EF Core InMemory, Swashbuckle.AspNetCore packages
-- `EcommerceDemo/Baskets/Baskets.http` — Updated with example requests for all endpoints
-
-## Testing & verification
-
-- [x] `dotnet build EcommerceDemo.slnx` — Build succeeded, 0 warnings, 0 errors
-- [x] Service starts on `http://localhost:5201`
-- [x] `GET /api/baskets/cust-001` — returns empty basket for new customer
-- [x] `POST /api/baskets/cust-001/items` — adds item 1 (Wireless Mouse, qty 2)
-- [x] `POST /api/baskets/cust-001/items` — adds item 2 (Mechanical Keyboard, qty 1) — both items present
-- [x] `DELETE /api/baskets/cust-001/items/{productId}` — removes item 1, only item 2 remains
-- [x] `POST /api/baskets/cust-001/checkout` — returns `BasketCheckedOut` event with items
-- [x] Basket is empty after checkout (items cleared)
-- [x] Swagger UI accessible at `http://localhost:5201/swagger/index.html` (HTTP 200)
-- [x] OpenAPI spec at `/swagger/v1/swagger.json` (HTTP 200)
-- [x] RabbitMQ event publishing gracefully handles RabbitMQ being unavailable (warning log, no crash)
-- [x] `ProductChanged` consumer registered as BackgroundService and starts on startup
-
-```
-dotnet build EcommerceDemo.slnx --nologo
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
-```
-
-## Dependencies
-
-- **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** [[07-bff-service]] (BFF needs Baskets endpoints to proxy), [[08-saga-orchestration]] (Saga needs Baskets checkout + restore endpoints)
-
-## Notes for presentation
-
-- Show the Swagger UI at `/swagger` — interactive API testing for all basket operations
-- Demonstrate the full basket lifecycle: add items, remove an item, checkout, verify basket is empty
-- Show the service logs — RabbitMQ connection attempts and graceful degradation warnings demonstrate the messaging integration
-- Point out the MediatR CQRS pattern: commands (write) and queries (read) are separated into different handlers
-- The `BasketCheckedOut` event with items and timestamp shows how integration events carry the checkout payload
-- The `ProductChangedConsumer` demonstrates event-driven architecture — Baskets reacts to product changes from the Products service without direct coupling
-- Highlight the `ProductChanged` consumer's behavior: updates names/prices for created/updated products, removes items for deleted products
-
-## Next steps
-
-All downstream tickets have been completed:
-- [[04-identity-service]] — Identity service (done)
-- [[05-orders-service]] — Orders service (done)
-- [[06-notifications-service]] — Notifications service (done)
-- [[07-bff-service]] — BFF proxies Baskets endpoints (done)
-- [[08-saga-orchestration]] — Saga uses Baskets checkout + restore (done)
+- `EcommerceDemo/Baskets/Features/Queries/GetBasket.cs` — Query handler
+- `EcommerceDemo/Baskets/Features/Commands/BasketCommands.cs` — Add/Remove/Checkout handlers
+- `EcommerceDemo/Baskets/Features/Consumers/ProductChangedConsumer.cs` — RabbitMQ consumer

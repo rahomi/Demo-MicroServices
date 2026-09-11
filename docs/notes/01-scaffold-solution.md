@@ -1,46 +1,52 @@
 ---
 ticket: "1"
-title: "Scaffold EcommerceDemo solution, projects, and shared Contracts"
+title: "Solution scaffolding and shared Contracts infrastructure"
 type: "task"
 date_completed: "2026-09-09"
 status: "completed"
 blocked_by: []
-blocks: ["T02", "T03", "T05", "T07", "T10", "Products service", "Baskets service", "Identity service", "Orders service", "Notifications service", "Distributed tracing"]
-tags: [ticket-completion]
+blocks: ["T03", "2", "3", "4", "5", "6", "9"]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# T01 + Ticket 1 — Scaffold EcommerceDemo Solution, Projects, and Shared Contracts
+# 🏗️ Solution Scaffolding & Shared Contracts Infrastructure
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> Before building microservices, you need a shared foundation: a solution structure, shared event contracts, and RabbitMQ messaging infrastructure. This note covers the **solution scaffolding pattern** and the **shared contracts library** that all services depend on.
 
-Established the .NET solution structure for the EcommerceDemo microservices project. Verified the installed .NET SDK (10.0.301), selected `net10.0` as the target framework, created 7 projects (Contracts + 6 service projects), and implemented the shared Contracts project with integration event DTOs and RabbitMQ messaging infrastructure using direct `RabbitMQ.Client`. The solution builds with zero errors and zero warnings.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Ran `dotnet --list-sdks` — found .NET 9.0.313 and .NET 10.0.301 installed; selected .NET 10 (net10.0) as the target framework
-- Created `EcommerceDemo.slnx` (new XML solution format) at repo root
-- Created `Directory.Build.props` with shared `<TargetFramework>net10.0</TargetFramework>`, `<Nullable>enable</Nullable>`, `<ImplicitUsings>enable</ImplicitUsings>`, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`
-- Created 7 projects and added them to the solution:
-  - `EcommerceDemo/Contracts/` — class library (event DTOs + RabbitMQ infrastructure)
-  - `EcommerceDemo/BFF/` — Backend for Frontend
-  - `EcommerceDemo/Products/` — Catalog service
-  - `EcommerceDemo/Baskets/` — Basket service
-  - `EcommerceDemo/Orders/` — Orders service
-  - `EcommerceDemo/Notifications/` — Notifications service
-  - `EcommerceDemo/Identity/` — Fake identity service
-- Added project references: all 6 service projects reference `Contracts`
-- Added NuGet packages to Contracts: `RabbitMQ.Client 7.2.2`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.Configuration.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Hosting.Abstractions`
-- Implemented Contracts project:
-  - Event DTOs: `OrderSubmitted`, `ProductChanged`, `BasketCheckedOut` (+ `OrderItemDto`, `BasketItemDto`)
-  - `IRabbitMqConnection` interface + `RabbitMqConnection` (persistent connection with reconnect, semaphore-guarded)
-  - `IEventPublisher` interface + `EventPublisher` (publishes JSON to RabbitMQ, injects W3C `traceparent` into message headers for distributed tracing)
-  - `EventConsumer<T>` base class (BackgroundService pattern, extracts `traceparent` from headers, creates linked activities, auto-ack/nack)
-  - `ServiceCollectionExtensions.AddRabbitMqMessaging()` DI registration helper
-  - Shared `ActivitySource` named `"RabbitMQ"` for OpenTelemetry tracing
-- Each service has a minimal `Program.cs` that starts an empty web server with startup logging
-- Identity service intentionally has no RabbitMQ (minimal per ticket spec)
+After reading this note, you should be able to:
 
-## Project dependency graph
+- Structure a .NET microservices solution with a shared Contracts project
+- Implement integration event DTOs as C# records
+- Build a persistent RabbitMQ connection with lazy reconnect
+- Create publish/consume abstractions over raw `RabbitMQ.Client`
+- Inject W3C `traceparent` headers for distributed tracing from day one
+
+---
+
+## 🧩 Main Concepts
+
+### 1. Solution Structure: The Shared Contracts Pattern
+
+#### Definition
+
+A **shared contracts library** is a class library project that contains integration event DTOs and messaging infrastructure shared across all microservices. Every service references it, ensuring a single source of truth for event definitions.
+
+#### Why It Exists
+
+Without a shared contracts project, each service would define its own version of event DTOs. When an event schema changes, you'd need to update every service independently — a maintenance nightmare.
+
+#### Problem It Solves
+
+Event schema drift. If Products publishes `ProductChanged` with fields `{Id, Name, Price}` but Baskets expects `{ProductId, ProductName, UnitPrice}`, the system breaks silently. A shared library eliminates this.
+
+#### How It Works
 
 ```mermaid
 flowchart TD
@@ -60,38 +66,303 @@ flowchart TD
     Identity --> Contracts
 ```
 
-## Key decisions
+All six service projects reference `Contracts`. The Contracts project references `RabbitMQ.Client` and `Microsoft.Extensions.*` abstractions.
 
-- **Target framework: net10.0** — .NET 10.0.301 is the latest stable SDK installed; no .NET 8 SDK present. PLAN.md says to use the latest stable SDK when compatible.
-- **Solution format: .slnx** — .NET 10's `dotnet new sln` creates the new XML-based `.slnx` format by default.
-- **Project template: `dotnet new web`** — Used the empty web template instead of `webapi` to avoid the `Microsoft.OpenApi` vulnerability warning (NU1903) that fails under `TreatWarningsAsErrors`. Services are minimal for this ticket.
-- **RabbitMQ.Client 7.x API changes** — `DispatchConsumersAsync` is no longer needed (async is default in 7.x), and `AsyncConsumerConsumerCancelledAsync` event was removed. Adapted the connection class accordingly.
-- **Distributed tracing built in from the start** — `EventPublisher` injects W3C `traceparent` into RabbitMQ message headers; `EventConsumer` extracts it and creates linked activities. This prepares the infrastructure for the OpenTelemetry + Jaeger ticket (T10).
+> [!tip]
+> NuGet packages in Contracts flow transitively to all services. This means you add `RabbitMQ.Client` once — not six times.
 
-## Artifacts created
+---
 
-- `Directory.Build.props` — shared build settings (TargetFramework, Nullable, ImplicitUsings, TreatWarningsAsErrors)
-- `EcommerceDemo.slnx` — solution file
-- `EcommerceDemo/Contracts/Contracts.csproj` — Contracts project file with NuGet packages
-- `EcommerceDemo/Contracts/Events/IntegrationEvents.cs` — event DTOs (OrderSubmitted, ProductChanged, BasketCheckedOut)
-- `EcommerceDemo/Contracts/Messaging/IRabbitMqConnection.cs` — connection interface
-- `EcommerceDemo/Contracts/Messaging/RabbitMqConnection.cs` — persistent connection with reconnect
-- `EcommerceDemo/Contracts/Messaging/IEventPublisher.cs` — publisher interface
-- `EcommerceDemo/Contracts/Messaging/EventPublisher.cs` — publisher with W3C traceparent injection
-- `EcommerceDemo/Contracts/Messaging/EventConsumer.cs` — consumer base class with traceparent extraction
-- `EcommerceDemo/Contracts/Messaging/ServiceCollectionExtensions.cs` — DI registration helper
-- `EcommerceDemo/BFF/Program.cs` — minimal BFF with RabbitMQ DI and startup logging
-- `EcommerceDemo/Products/Program.cs` — minimal Products with RabbitMQ DI and startup logging
-- `EcommerceDemo/Baskets/Program.cs` — minimal Baskets with RabbitMQ DI and startup logging
-- `EcommerceDemo/Orders/Program.cs` — minimal Orders with RabbitMQ DI and startup logging
-- `EcommerceDemo/Notifications/Program.cs` — minimal Notifications with RabbitMQ DI and startup logging
-- `EcommerceDemo/Identity/Program.cs` — minimal Identity (no RabbitMQ) with startup logging
+### 2. Integration Events as C# Records
 
-## Testing & verification
+#### Definition
 
-- [x] `dotnet build EcommerceDemo.slnx` — Build succeeded, 0 warnings, 0 errors
-- [x] Identity service started and responded with HTTP 200 "Hello from Identity" at `http://localhost:5005/`
-- [x] `git status --short` — clean working tree after commit
+An **integration event** is a message published when something happens in one service that other services need to know about. Unlike domain events (internal to a bounded context), integration events cross service boundaries.
+
+#### Implementation
+
+```csharp
+// Contracts/Events/IntegrationEvents.cs
+
+namespace Contracts.Events;
+
+/// <summary>
+/// Published when an order is submitted/created.
+/// </summary>
+public record OrderSubmitted(
+    Guid OrderId,
+    string CustomerId,
+    decimal Total,
+    List<OrderItemDto> Items,
+    DateTime CreatedAt);
+
+/// <summary>
+/// Published when a product is created, updated, or deleted.
+/// </summary>
+public record ProductChanged(
+    Guid ProductId,
+    string Name,
+    decimal Price,
+    string ChangeType);
+
+/// <summary>
+/// Published when a basket is checked out.
+/// </summary>
+public record BasketCheckedOut(
+    string CustomerId,
+    List<BasketItemDto> Items,
+    DateTime CheckedOutAt);
+```
+
+> [!info]
+> Using `record` types gives us value equality, immutability, and structural comparison — all critical for event contracts that must be versioned and compared.
+
+---
+
+### 3. Persistent RabbitMQ Connection
+
+#### Definition
+
+A **persistent connection** maintains a long-lived TCP connection to RabbitMQ, reconnecting automatically if the connection drops. This avoids the overhead of connecting per publish/consume.
+
+#### Problem It Solves
+
+Without a persistent connection, every `IEventPublisher.PublishAsync()` call would open a TCP connection, publish, and close it. Under load, this exhausts connections and adds latency.
+
+#### Implementation Progress
+
+**Step 1 — Interface:**
+
+```csharp
+public interface IRabbitMqConnection
+{
+    bool IsConnected { get; }
+    IModel CreateModel();
+    bool TryConnect();
+}
+```
+
+**Step 2 — Implementation with semaphore-guarded reconnect:**
+
+```csharp
+public class RabbitMqConnection : IRabbitMqConnection, IDisposable
+{
+    private readonly IConnectionFactory _connectionFactory;
+    private IConnection? _connection;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private bool _disposed;
+
+    public RabbitMqConnection(IConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
+    public bool IsConnected => _connection is { IsOpen: true };
+
+    public IModel CreateModel()
+    {
+        if (!IsConnected) TryConnect();
+        return _connection!.CreateModel();
+    }
+
+    public bool TryConnect()
+    {
+        _semaphore.Wait();
+        try
+        {
+            if (IsConnected) return true;
+            _connection = _connectionFactory.CreateConnection();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+}
+```
+
+> [!warning]
+> RabbitMQ.Client 7.x changed the async API. `DispatchConsumersAsync` is no longer needed (async is default). `AsyncConsumerConsumerCancelledAsync` was removed. Adapt your connection class accordingly.
+
+---
+
+### 4. Event Publisher with W3C Traceparent Injection
+
+#### Definition
+
+The **EventPublisher** serializes an event to JSON, creates a RabbitMQ channel, injects the W3C `traceparent` header for distributed tracing, and publishes to an exchange with a routing key.
+
+#### How It Works
+
+```mermaid
+flowchart LR
+    Handler["Command Handler"] --> Publisher["EventPublisher"]
+    Publisher -->|"1. Create channel"| Conn["RabbitMqConnection"]
+    Publisher -->|"2. Serialize to JSON"| JSON["System.Text.Json"]
+    Publisher -->|"3. Inject traceparent"| Headers["IBasicProperties.Headers"]
+    Publisher -->|"4. BasicPublish"| Exchange["amq.topic exchange"]
+```
+
+#### Code Diff: Before vs After Traceparent
+
+**Before (no tracing):**
+
+```csharp
+public async Task PublishAsync<T>(string exchange, string routingKey, T @event)
+{
+    using var channel = _connection.CreateModel();
+    var body = JsonSerializer.SerializeToUtf8Bytes(@event);
+    channel.BasicPublish(exchange, routingKey, body: body);
+}
+```
+
+**After (with W3C traceparent):**
+
+```csharp
+public async Task PublishAsync<T>(string exchange, string routingKey, T @event)
+{
+    using var channel = _connection.CreateModel();
+    var body = JsonSerializer.SerializeToUtf8Bytes(@event);
+
+    var props = channel.CreateBasicProperties();
+    props.Persistent = true;
+
+    // Inject W3C traceparent for distributed tracing
+    using var activity = _activitySource.StartActivity("RabbitMQ.Publish", ActivityKind.Producer);
+    if (Activity.Current is not null)
+    {
+        var traceparent = $"00-{Activity.Current.TraceId}-{Activity.Current.SpanId}-01";
+        props.Headers ??= new Dictionary<string, object?>();
+        props.Headers["traceparent"] = Encoding.UTF8.GetBytes(traceparent);
+    }
+
+    channel.BasicPublish(exchange, routingKey, props, body);
+}
+```
+
+> [!tip]
+> Building in traceparent injection from day one means the distributed tracing ticket (Ticket 9) is just SDK registration — no refactoring needed.
+
+---
+
+### 5. Event Consumer Base Class
+
+#### Definition
+
+`EventConsumer<T>` is an abstract `BackgroundService` that declares a queue, binds it to `amq.topic` with a routing key, and processes messages. Subclasses implement `HandleAsync`.
+
+#### Implementation
+
+```csharp
+public abstract class EventConsumer<T> : BackgroundService
+{
+    protected abstract string QueueName { get; }
+    protected abstract string RoutingKey { get; }
+    protected abstract Task HandleAsync(T @event, CancellationToken ct);
+
+    protected override Task ExecuteAsync(CancellationToken ct)
+    {
+        var channel = _connection.CreateModel();
+        channel.QueueDeclare(QueueName, durable: true, autoDelete: false);
+        channel.QueueBind(QueueName, "amq.topic", RoutingKey);
+
+        var consumer = new AsyncEventingBasicConsumer(channel);
+        consumer.ReceivedAsync += async (_, ea) =>
+        {
+            // Extract traceparent and create linked activity
+            var traceparent = ExtractTraceparent(ea.BasicProperties);
+            using var activity = _activitySource.StartActivity("RabbitMQ.Consume",
+                ActivityKind.Consumer, traceparent);
+
+            var @event = JsonSerializer.Deserialize<T>(ea.Body.Span)!;
+            await HandleAsync(@event, ct);
+            channel.BasicAck(ea.DeliveryTag, multiple: false);
+        };
+
+        channel.BasicConsume(QueueName, autoAck: false, consumer);
+        return Task.CompletedTask;
+    }
+}
+```
+
+> [!info]
+> The consumer creates a **linked activity** from the extracted traceparent. This means the consume span appears as a child of the publish span in Jaeger — even though they're in different services.
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Verify SDK and create solution
+
+```bash
+dotnet --list-sdks
+# Found: 10.0.301 → target net10.0
+
+dotnet new sln -n EcommerceDemo  # Creates .slnx (new XML format)
+```
+
+### Step 2 — Create projects
+
+```bash
+dotnet new classlib -o EcommerceDemo/Contracts
+dotnet new web -o EcommerceDemo/BFF
+dotnet new web -o EcommerceDemo/Products
+dotnet new web -o EcommerceDemo/Baskets
+dotnet new web -o EcommerceDemo/Orders
+dotnet new web -o EcommerceDemo/Notifications
+dotnet new web -o EcommerceDemo/Identity
+```
+
+### Step 3 — Add project references
+
+All six service projects reference Contracts:
+
+```xml
+<!-- In each service .csproj -->
+<ProjectReference Include="..\Contracts\Contracts.csproj" />
+```
+
+### Step 4 — Shared build settings
+
+```xml
+<!-- Directory.Build.props -->
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
+```
+
+> [!danger]
+> `TreatWarningsAsErrors` is enforced from day one. This caught deprecated `WithOpenApi()` in .NET 10 and `NU1903` vulnerability warnings early.
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Target framework | `net10.0` | Latest stable SDK (10.0.301) |
+| Solution format | `.slnx` | .NET 10 default (XML-based) |
+| Project template | `dotnet new web` | Avoids `Microsoft.OpenApi` vulnerability warning (NU1903) |
+| RabbitMQ client | `RabbitMQ.Client 7.2.2` | Direct API, no MassTransit — educational visibility |
+| Serialization | `System.Text.Json` | Built-in, performant, no extra dependencies |
+| Tracing | W3C traceparent in headers | Built in from day one — enables Jaeger later |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
+- [x] Identity service started and responded with HTTP 200
 
 ```
 dotnet build EcommerceDemo.slnx --nologo -v q
@@ -100,26 +371,25 @@ Build succeeded.
     0 Error(s)
 ```
 
-## Dependencies
+---
 
-- **Blocked by:** None — this is the first ticket (frontier)
-- **Unblocks:** [[T03-rabbitmq-contracts-design]] (T03 — RabbitMQ contracts design), [[02-products-service]] (Ticket 2 — Products), [[03-baskets-service]] (Ticket 3 — Baskets), [[04-identity-service]] (Ticket 4 — Identity), [[05-orders-service]] (Ticket 5 — Orders), [[06-notifications-service]] (Ticket 6 — Notifications), [[09-distributed-tracing]] (Ticket 9 — Distributed tracing)
+## 📎 See Also
 
-## Notes for presentation
+- [[T03-rabbitmq-contracts-design]] — RabbitMQ contracts design decision ticket
+- [[02-products-service]] — First service using CQRS + MediatR
+- [[09-distributed-tracing]] — OpenTelemetry SDK registration (uses the traceparent infrastructure built here)
+- [[retrospective]] — Lessons learned from the project
 
-- The solution structure is the foundation — every subsequent ticket builds on these 7 projects
-- The Contracts project is the shared infrastructure that all services depend on for messaging
-- Distributed tracing hooks (W3C traceparent injection/extraction) are already built in, making the OpenTelemetry ticket (T10) straightforward
-- The `TreatWarningsAsErrors` setting enforces code quality from the start
-- Show the build output (0 errors, 0 warnings) and the live Identity service response
+---
 
-## Next steps
+## 📝 Artifacts Created
 
-All downstream tickets have been completed. The scaffold laid the foundation for:
-- [[T03-rabbitmq-contracts-design]] — RabbitMQ contracts design (resolved)
-- [[02-products-service]] — Products service (done)
-- [[03-baskets-service]] — Baskets service (done)
-- [[04-identity-service]] — Identity service (done)
-- [[05-orders-service]] — Orders service (done)
-- [[06-notifications-service]] — Notifications service (done)
-- [[09-distributed-tracing]] — Distributed tracing (done)
+- `Directory.Build.props` — shared build settings
+- `EcommerceDemo.slnx` — solution file
+- `EcommerceDemo/Contracts/Events/IntegrationEvents.cs` — event DTOs
+- `EcommerceDemo/Contracts/Messaging/IRabbitMqConnection.cs` — connection interface
+- `EcommerceDemo/Contracts/Messaging/RabbitMqConnection.cs` — persistent connection
+- `EcommerceDemo/Contracts/Messaging/IEventPublisher.cs` — publisher interface
+- `EcommerceDemo/Contracts/Messaging/EventPublisher.cs` — publisher with traceparent injection
+- `EcommerceDemo/Contracts/Messaging/EventConsumer.cs` — consumer base class
+- `EcommerceDemo/Contracts/Messaging/ServiceCollectionExtensions.cs` — DI registration helper

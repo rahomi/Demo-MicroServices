@@ -6,32 +6,48 @@ date_completed: "2026-09-11"
 status: "completed"
 blocked_by: [1]
 blocks: [10, 11]
-tags: [ticket-completion]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# Ticket 9 — Distributed tracing: OpenTelemetry + Jaeger
+# 🔍 Distributed Tracing: OpenTelemetry + Jaeger
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> In a microservices system, a single user request spans multiple services and crosses an async messaging boundary (RabbitMQ). **Distributed tracing** with OpenTelemetry + Jaeger lets you see the entire request as a single trace tree — HTTP calls, RabbitMQ publishes, and consumer processing all linked by the W3C `traceparent` header.
 
-Added OpenTelemetry distributed tracing to all six services (BFF, Products, Baskets, Orders, Notifications, Identity) so that a user can trigger a checkout and see a single end-to-end trace in Jaeger spanning HTTP calls (BFF → downstream services) and RabbitMQ events (event publish → Notifications consume). The RabbitMQ traceparent injection/extraction was already implemented in Ticket 1; this ticket wires up the OpenTelemetry SDK registration so those spans actually get exported to a Jaeger backend via OTLP.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Added 4 OpenTelemetry NuGet packages to the Contracts project:
-  - `OpenTelemetry.Extensions.Hosting` (1.18.0)
-  - `OpenTelemetry.Instrumentation.AspNetCore` (1.18.0)
-  - `OpenTelemetry.Instrumentation.Http` (1.18.0)
-  - `OpenTelemetry.Exporter.OpenTelemetryProtocol` (1.18.0)
-- Created shared `OpenTelemetryExtensions.cs` in `Contracts/Messaging/` with `AddOpenTelemetryTracing()` extension method
-- Registered OpenTelemetry in all 6 service `Program.cs` files by calling `builder.Services.AddOpenTelemetryTracing(builder.Configuration)`
-- Added `OTEL_SERVICE_NAME` and `OTEL_EXPORTER_OTLP_ENDPOINT` to all 6 `appsettings.json` files
-- The shared registration instruments:
-  - ASP.NET Core (`AddAspNetCoreInstrumentation`) — traces incoming HTTP requests
-  - HttpClient (`AddHttpClientInstrumentation`) — traces outgoing HTTP calls (BFF → downstream)
-  - RabbitMQ activity source (`AddSource("RabbitMQ")`) — links to the existing ActivitySource in EventPublisher/EventConsumer
-  - OTLP exporter (`AddOtlpExporter`) — sends traces to Jaeger at the configured endpoint
+- Register **OpenTelemetry SDK** in all services with a shared extension method
+- Understand how **W3C traceparent** propagates across HTTP and RabbitMQ boundaries
+- Export traces to **Jaeger** via OTLP
+- See a single checkout produce a trace spanning BFF → Baskets → Orders → RabbitMQ → Notifications
 
-## Trace propagation sequence
+---
+
+## 🧩 Main Concepts
+
+### 1. Distributed Tracing Fundamentals
+
+#### Definition
+
+**Distributed tracing** tracks a single user request as it flows through multiple services. Each service contributes a **span** (a unit of work), and spans are linked into a **trace tree** by a shared trace ID.
+
+#### Why It Exists
+
+Without tracing, debugging a slow checkout means checking logs in BFF, Baskets, Orders, and Notifications separately — with no way to correlate them. Tracing links all the logs into one visual tree.
+
+#### Problem It Solves
+
+The "where did it go wrong?" problem. With tracing, you open Jaeger, find the checkout trace, and immediately see which service is slow or failing.
+
+---
+
+### 2. Trace Propagation Across Boundaries
+
+#### How It Works
 
 ```mermaid
 sequenceDiagram
@@ -43,70 +59,141 @@ sequenceDiagram
     participant Notifications
 
     Client->>BFF: POST /api/baskets/{id}/checkout
-    BFF->>Baskets: POST /api/baskets/{id}/checkout (traceparent)
-    Baskets->>RabbitMQ: publish BasketCheckedOut (traceparent in headers)
+    Note over BFF: span: HTTP request
+    BFF->>Baskets: POST /api/baskets/{id}/checkout (traceparent header)
+    Note over Baskets: span: HTTP request (child of BFF)
+    Baskets->>RabbitMQ: publish BasketCheckedOut (traceparent in msg headers)
+    Note over RabbitMQ: traceparent stored in headers
     RabbitMQ->>Notifications: consume BasketCheckedOut (linked activity)
+    Note over Notifications: span: consume (linked to publish span)
     Baskets-->>BFF: 200 OK
-    BFF->>Orders: POST /api/orders (traceparent)
-    Orders->>RabbitMQ: publish OrderSubmitted (traceparent in headers)
-    RabbitMQ->>Notifications: consume OrderSubmitted (linked activity)
+    BFF->>Orders: POST /api/orders (traceparent header)
+    Note over Orders: span: HTTP request (child of BFF)
     Orders-->>BFF: 201 Created
-    BFF-->>Client: 200 OK (saga completed)
+    BFF-->>Client: 200 OK
 ```
 
-## Key decisions
+> [!info]
+> The trace crosses the **async messaging boundary** because `EventPublisher` injects the W3C `traceparent` header into RabbitMQ message properties, and `EventConsumer` extracts it to create a **linked activity**. This was built in [[01-scaffold-solution]] — this ticket just wires up the SDK.
 
-- **Packages in Contracts only, not per-service:** All 6 service projects already reference Contracts. NuGet PackageReference packages flow transitively through project references, so adding them to Contracts alone is sufficient. This centralizes package version management in one place and avoids 24 duplicate `<PackageReference>` lines across 6 .csproj files.
-- **Shared registration extension:** A single `AddOpenTelemetryTracing()` method in Contracts ensures all services are instrumented consistently. Each service just calls one line in its `Program.cs`.
-- **Configuration via appsettings.json + environment variables:** `OTEL_SERVICE_NAME` and `OTEL_EXPORTER_OTLP_ENDPOINT` are set in appsettings.json for local dev defaults (`http://localhost:4317`). In Docker Compose, these will be overridden by environment variables (`http://jaeger:4317`).
-- **RabbitMQ trace propagation already existed:** The `EventPublisher` (injects W3C traceparent into message headers) and `EventConsumer` (extracts traceparent, creates linked activity) were implemented in Ticket 1. This ticket adds the SDK registration so those ActivitySource spans get exported.
-- **AlwaysOn sampling (implicit):** Demo traffic is low; default sampling is sufficient. No explicit sampler configuration needed.
+---
 
-## Artifacts created
+### 3. Shared OpenTelemetry Registration
 
-- `EcommerceDemo/Contracts/Messaging/OpenTelemetryExtensions.cs` — Shared `AddOpenTelemetryTracing()` extension method
-- `EcommerceDemo/Contracts/Contracts.csproj` — Added 4 OpenTelemetry package references
-- `EcommerceDemo/BFF/Program.cs` — Added OpenTelemetry registration
-- `EcommerceDemo/Products/Program.cs` — Added OpenTelemetry registration
-- `EcommerceDemo/Baskets/Program.cs` — Added OpenTelemetry registration
-- `EcommerceDemo/Orders/Program.cs` — Added OpenTelemetry registration
-- `EcommerceDemo/Notifications/Program.cs` — Added OpenTelemetry registration
-- `EcommerceDemo/Identity/Program.cs` — Added OpenTelemetry registration
-- `EcommerceDemo/BFF/appsettings.json` — Added `OTEL_SERVICE_NAME: "bff"`, `OTEL_EXPORTER_OTLP_ENDPOINT`
-- `EcommerceDemo/Products/appsettings.json` — Added `OTEL_SERVICE_NAME: "products"`, `OTEL_EXPORTER_OTLP_ENDPOINT`
-- `EcommerceDemo/Baskets/appsettings.json` — Added `OTEL_SERVICE_NAME: "baskets"`, `OTEL_EXPORTER_OTLP_ENDPOINT`
-- `EcommerceDemo/Orders/appsettings.json` — Added `OTEL_SERVICE_NAME: "orders"`, `OTEL_EXPORTER_OTLP_ENDPOINT`
-- `EcommerceDemo/Notifications/appsettings.json` — Added `OTEL_SERVICE_NAME: "notifications"`, `OTEL_EXPORTER_OTLP_ENDPOINT`
-- `EcommerceDemo/Identity/appsettings.json` — Added `OTEL_SERVICE_NAME: "identity"`, `OTEL_EXPORTER_OTLP_ENDPOINT`
+#### Definition
 
-## Testing & verification
+A single `AddOpenTelemetryTracing()` extension method in Contracts ensures all 6 services are instrumented consistently. Each service calls one line in `Program.cs`.
 
-- [x] Build verification — `dotnet build EcommerceDemo.slnx`
-- [x] Zero errors, zero warnings
+#### Implementation
 
+```csharp
+// Contracts/Messaging/OpenTelemetryExtensions.cs
+public static class OpenTelemetryExtensions
+{
+    public static IServiceCollection AddOpenTelemetryTracing(
+        this IServiceCollection services, IConfiguration config)
+    {
+        services.AddOpenTelemetry()
+            .WithTracing(tracing =>
+            {
+                tracing
+                    .AddAspNetCoreInstrumentation()      // Incoming HTTP
+                    .AddHttpClientInstrumentation()       // Outgoing HTTP (BFF → downstream)
+                    .AddSource("RabbitMQ")               // Custom ActivitySource from EventPublisher/Consumer
+                    .AddOtlpExporter(otlp =>
+                    {
+                        otlp.Endpoint = new Uri(
+                            config["OTEL_EXPORTER_OTLP_ENDPOINT"]
+                            ?? "http://localhost:4317");
+                    });
+            });
+
+        return services;
+    }
+}
 ```
-dotnet build EcommerceDemo.slnx
-Build succeeded in 11.5s
+
+#### Registration in each service:
+
+```csharp
+// In every service's Program.cs
+builder.Services.AddOpenTelemetryTracing(builder.Configuration);
 ```
 
+#### Configuration in appsettings.json:
+
+```json
+{
+  "OTEL_SERVICE_NAME": "bff",
+  "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317"
+}
+```
+
+> [!tip]
+> Packages are in Contracts only — NuGet PackageReference flows transitively through project references. This means 4 packages in one place, not 24 `<PackageReference>` lines across 6 .csproj files.
+
+---
+
+### 4. What Gets Instrumented
+
+| Instrumentation | What It Traces | Package |
+|-----------------|----------------|--------|
+| `AddAspNetCoreInstrumentation` | Incoming HTTP requests | `OpenTelemetry.Instrumentation.AspNetCore` |
+| `AddHttpClientInstrumentation` | Outgoing HTTP calls (BFF → downstream) | `OpenTelemetry.Instrumentation.Http` |
+| `AddSource("RabbitMQ")` | Custom spans from `EventPublisher`/`EventConsumer` | (uses ActivitySource from Ticket 1) |
+| `AddOtlpExporter` | Exports traces to Jaeger via OTLP gRPC | `OpenTelemetry.Exporter.OpenTelemetryProtocol` |
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Add OpenTelemetry packages to Contracts
+4 packages: Extensions.Hosting, AspNetCore, Http, Exporter.OpenTelemetryProtocol (all 1.18.0)
+
+### Step 2 — Create shared extension method
+`AddOpenTelemetryTracing()` in `Contracts/Messaging/OpenTelemetryExtensions.cs`
+
+### Step 3 — Register in all 6 services
+One line per service: `builder.Services.AddOpenTelemetryTracing(builder.Configuration)`
+
+### Step 4 — Add config to all 6 appsettings.json
+`OTEL_SERVICE_NAME` (unique per service) + `OTEL_EXPORTER_OTLP_ENDPOINT`
+
+### Step 5 — Add Jaeger container (done in [[10-docker-compose]])
+`jaegertracing/all-in-one:1.62` with `COLLECTOR_OTLP_ENABLED=true`, ports 16686 (UI) + 4317 (OTLP)
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Packages in Contracts | Not per-service | Transitive flow — one place to manage versions |
+| Shared extension method | `AddOpenTelemetryTracing()` | Consistent instrumentation across all services |
+| Config via appsettings + env vars | `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT` | Local dev: localhost:4317, Docker: jaeger:4317 |
+| Sampling | Default (AlwaysOn) | Demo traffic is low — no explicit sampler needed |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] Build verification — 0 errors, 0 warnings
 - [x] Full stack verification (Docker Compose + Jaeger) — verified in [[10-docker-compose]]
 - [x] Trace visibility in Jaeger UI — Jaeger container added in [[10-docker-compose]]
 
-## Dependencies
+---
 
-- **Blocked by:** [[01-scaffold-solution]] (Ticket 1 — scaffold + Contracts with RabbitMQ traceparent injection)
-- **Unblocks:** [[10-docker-compose]] (Ticket 10 — Docker Compose with Jaeger container), [[11-http-examples-and-readme]] (Ticket 11 — README with Jaeger UI access instructions)
+## 📎 See Also
 
-## Notes for presentation
+- [[01-scaffold-solution]] — Traceparent injection/extraction built here (EventPublisher + EventConsumer)
+- [[10-docker-compose]] — Jaeger container + OTLP endpoint configuration
+- [[11-http-examples-and-readme]] — README with Jaeger UI access instructions
 
-- The RabbitMQ trace propagation was built in Ticket 1 but had no backend to export to. This ticket completes the tracing story by adding the OpenTelemetry SDK.
-- Key demo: trigger a checkout, open Jaeger UI at `http://localhost:16686`, and show a single trace tree: BFF → Baskets → Orders → event publish → Notifications consume.
-- The trace crosses the async messaging boundary because `EventPublisher` injects the W3C `traceparent` header into RabbitMQ message properties, and `EventConsumer` extracts it to create a linked activity.
-- Emphasize the transitive package reference design — one place to manage OpenTelemetry versions.
-- The Jaeger container itself is added in Ticket 10 (Docker Compose). For local dev without Docker, run a standalone Jaeger container: `docker run -d -p 4317:4317 -p 16686:16686 jaegertracing/all-in-one`.
+---
 
-## Next steps
+## 📝 Artifacts Created
 
-All downstream tickets have been completed:
-- [[10-docker-compose]] — Docker Compose with Jaeger container (done)
-- [[11-http-examples-and-readme]] — README with Jaeger UI access instructions (done)
+- `EcommerceDemo/Contracts/Messaging/OpenTelemetryExtensions.cs` — Shared `AddOpenTelemetryTracing()` method
+- `EcommerceDemo/Contracts/Contracts.csproj` — 4 OpenTelemetry package references
+- All 6 service `Program.cs` files — OpenTelemetry registration
+- All 6 `appsettings.json` files — `OTEL_SERVICE_NAME` + `OTEL_EXPORTER_OTLP_ENDPOINT`

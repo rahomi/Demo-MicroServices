@@ -26,8 +26,8 @@ Quick-reference table for all ticket completion notes in this directory.
 
 ## Retrospective
 
-| Note | Type |
-|------|------|
+| Note              | Type                                                     |
+| ----------------- | -------------------------------------------------------- |
 | [[retrospective]] | Lessons learned, surprises, and what we'd do differently |
 
 ---

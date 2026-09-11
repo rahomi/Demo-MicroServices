@@ -1,88 +1,192 @@
 ---
 ticket: "11"
-title: "HTTP examples and README documentation"
+title: "API documentation: .http files + comprehensive README"
 type: "task"
 date_completed: "2026-09-11"
 status: "completed"
 blocked_by: ["10-docker-compose", "08-saga-orchestration", "09-distributed-tracing"]
 blocks: []
-tags: [ticket-completion]
+tags: [ticket-completion, concept-tutorial]
 ---
 
-# 11 — HTTP Examples and README Documentation
+# 📖 API Documentation: .http Files + Comprehensive README
 
-## Summary
+> [!abstract]
+> **Core Idea**
+>
+> A new user should be able to clone the repo, run `docker compose up --build`, and verify the entire system works in 10 steps. This note covers the `api.http` file (interactive API reference for VS Code REST Client) and the `README.md` (one-command startup, routing map, tracing, saga, and verification checklist).
 
-Created a comprehensive `api.http` file covering all API operations (products, baskets, checkout, orders, event-driven behavior, saga failure, identity, and a full 10-step demo sequence) and a complete `README.md` with one-command startup instructions, service URLs, routing map, RabbitMQ/Jaeger access, sample request sequence, event flow explanation, saga pattern explanation, distributed tracing explanation, local dev instructions, in-memory reset limitations, and the 10-step verification checklist. A new user can now follow the README from clone to verified demo.
+---
 
-## What was done
+## 🎯 Learning Objectives
 
-- Created `api.http` at repo root with all API operations organized into 8 sections:
-  1. Product operations (GET all, GET by ID, POST create, PUT update, DELETE)
-  2. Basket operations (GET basket, POST add item, DELETE remove item)
-  3. Checkout (saga orchestration + saga state inspection)
-  4. Orders (POST submit, GET by ID, GET by customer, DELETE cancel)
-  5. Event-driven behavior (trigger ProductChanged, check notifications)
-  6. Saga failure & compensation (step-by-step instructions with docker compose stop/start)
-  7. Identity (GET customer via BFF and direct)
-  8. Full 10-step demo sequence walkthrough
-- Created `README.md` at repo root covering all acceptance criteria:
-  - One-command startup (`docker compose up --build`)
-  - Service URLs table (all 6 services + RabbitMQ management + Jaeger UI)
-  - Architecture overview with ASCII diagram and key design decisions
-  - Routing map (BFF route → downstream service)
-  - RabbitMQ management access instructions with event topology table
-  - Jaeger UI access and sample trace walkthrough
-  - Step-by-step sample request sequence (10 steps with curl commands)
-  - Event flow explanation (checkout → BasketCheckedOut → OrderSubmitted → Notifications)
-  - Saga pattern explanation and compensation flow with state machine diagram
-  - Distributed tracing explanation (HTTP + RabbitMQ propagation)
-  - In-memory database reset limitations
-  - Local dev without Docker instructions
-  - 10-step verification checklist from PLAN.md
-  - Project structure tree
-  - Technologies table
+- Structure an `api.http` file with **variables and sections** for all API operations
+- Write a README that covers **startup, routing, tracing, saga, and verification**
+- Create a **10-step demo sequence** that mirrors the PLAN.md verification checklist
+- Document the **saga failure simulation** (stop orders container, checkout, verify basket restored)
 
-## Key decisions
+---
 
-- **Single `api.http` file at repo root:** Rather than scattering `.http` files across service projects, a single file at the repo root provides a complete, navigable API reference. It uses variables (`@bff`, `@products`, etc.) so requests can target either the BFF or a downstream service directly.
-- **README covers both Docker and local dev:** The README includes instructions for `docker compose up --build` (primary) and `dotnet run` per service (for debugging), since PLAN.md requires both paths.
-- **curl commands in README:** The sample request sequence uses `curl` commands so they can be copy-pasted in any terminal, independent of VS Code or the REST Client extension.
+## 🧩 Main Concepts
 
-## Artifacts created
+### 1. The .http File as Interactive API Reference
 
-- `api.http` — HTTP examples for all API operations (products, baskets, checkout, orders, event-driven, saga failure, identity, full demo sequence)
-- `README.md` — Comprehensive project documentation with startup, routing, tracing, saga, and verification sections
+#### Definition
 
-## Testing & verification
+A `.http` file is a plain-text format recognized by VS Code's REST Client extension. It lets you define HTTP requests with variables, sections, and comments — then execute them with a single click.
 
-- [x] `dotnet build EcommerceDemo.slnx` — Build succeeded, 0 warnings, 0 errors
-- [x] `git status` — Working tree clean after commit (only 2 new untracked files, no modifications to existing code)
+#### Structure
+
+```http
+### Variables
+@bff = http://localhost:5000
+@products = http://localhost:5001
+
+### 1. Product Operations
+### Get all products
+GET {{bff}}/api/products
+
+### Create a product
+POST {{bff}}/api/products
+Content-Type: application/json
+
+{
+  "name": "Gaming Mouse",
+  "price": 59.99,
+  "category": "Peripherals"
+}
+
+### 2. Basket Operations
+### Add item to basket
+POST {{bff}}/api/baskets/cust-001/items
+Content-Type: application/json
+
+{
+  "productId": "{{$guid}}",
+  "productName": "Wireless Mouse",
+  "unitPrice": 29.99,
+  "quantity": 2
+}
+
+### 3. Checkout (Saga)
+### Start checkout — triggers saga orchestration
+POST {{bff}}/api/baskets/cust-001/checkout
+
+### Inspect saga state
+GET {{bff}}/api/sagas/{{sagaId}}
+```
+
+> [!tip]
+> Using `@bff` variable means you can switch between calling the BFF (port 5000) or a downstream service directly by changing one variable.
+
+---
+
+### 2. The 10-Step Demo Sequence
+
+#### Definition
+
+A scripted sequence of API calls that demonstrates the full system — from product creation to saga failure simulation.
+
+| Step | Action | What It Demonstrates |
+|------|--------|---------------------|
+| 1 | `GET /api/products` | Products service + seed data |
+| 2 | `POST /api/products` | Create + `ProductChanged` event |
+| 3 | `GET /api/notifications` | Event-driven architecture (event appeared) |
+| 4 | `POST /api/baskets/cust-001/items` | Basket operations |
+| 5 | `POST /api/baskets/cust-001/checkout` | Saga orchestration |
+| 6 | `GET /api/sagas/{id}` | Saga state inspection |
+| 7 | `docker compose stop orders` | Failure simulation |
+| 8 | `POST /api/baskets/cust-001/checkout` | Saga compensation |
+| 9 | `GET /api/sagas/{id}` | Saga state = Failed, basket restored |
+| 10 | Open Jaeger UI | Distributed trace tree |
+
+---
+
+### 3. README Structure
+
+```markdown
+# EcommerceDemo — Microservices with Saga + Distributed Tracing
+
+## Quick Start
+docker compose up --build
+
+## Service URLs
+| Service | URL | Port |
+|---------|-----|------|
+| BFF (Swagger) | http://localhost:5000/swagger | 5000 |
+| RabbitMQ UI | http://localhost:15672 | 15672 |
+| Jaeger UI | http://localhost:16686 | 16686 |
+
+## Architecture
+[ASCII diagram of 8-container topology]
+
+## Routing Map
+[BFF route → downstream service]
+
+## Event Flow
+[checkout → BasketCheckedOut → OrderSubmitted → Notifications]
+
+## Saga Pattern
+[State machine + compensation flow]
+
+## Distributed Tracing
+[How traceparent crosses HTTP + RabbitMQ]
+
+## 10-Step Verification
+[Mirrors PLAN.md checklist]
+```
+
+---
+
+## 🛠️ Implementation Process
+
+### Step 1 — Create `api.http` at repo root
+8 sections: products, baskets, checkout, orders, event-driven, saga failure, identity, full demo
+
+### Step 2 — Create `README.md` at repo root
+Cover: startup, service URLs, architecture, routing, RabbitMQ, Jaeger, sample sequence, event flow, saga, tracing, local dev, verification checklist, project structure, technologies
+
+### Step 3 — Verify build
+`dotnet build EcommerceDemo.slnx` — 0 errors, 0 warnings
+
+### Step 4 — Developer confirmation (GATE)
+Developer confirmed "yes" at the Step 5 gate
+
+---
+
+## 📊 Key Decisions
+
+| Decision | Choice | Why |
+|----------|--------|-----|
+| Single `api.http` at root | Not scattered per-service | Complete, navigable API reference in one file |
+| README covers Docker + local dev | Both paths | PLAN.md requires both |
+| curl commands in README | Not just .http | Copy-paste in any terminal, no VS Code needed |
+| 10-step sequence | Mirrors PLAN.md | Easy to demo the full flow |
+
+---
+
+## ✅ Testing & Verification
+
+- [x] `dotnet build EcommerceDemo.slnx` — 0 errors, 0 warnings
 - [x] Developer confirmed "yes" at the Step 5 gate
 
-```
-dotnet build EcommerceDemo.slnx
-Build succeeded.
-    0 Warning(s)
-    0 Error(s)
-```
+---
 
-## Dependencies
+## 📎 See Also
 
-- **Blocked by:** [[10-docker-compose]] (Docker Compose topology), [[08-saga-orchestration]] (Saga pattern), [[09-distributed-tracing]] (Distributed tracing)
-- **Unblocks:** None — this is the final implementation ticket
+- [[02-products-service]] — Products endpoints documented
+- [[03-baskets-service]] — Baskets endpoints documented
+- [[04-identity-service]] — Identity endpoint documented
+- [[05-orders-service]] — Orders endpoints documented
+- [[06-notifications-service]] — Notifications endpoint documented
+- [[07-bff-service]] — BFF routing map documented
+- [[08-saga-orchestration]] — Saga pattern documented in README
+- [[09-distributed-tracing]] — Tracing documented in README
+- [[10-docker-compose]] — Docker Compose startup documented in README
 
-> The README documents all services ([[02-products-service]], [[03-baskets-service]], [[04-identity-service]], [[05-orders-service]], [[06-notifications-service]], [[07-bff-service]]), the saga pattern ([[08-saga-orchestration]]), distributed tracing ([[09-distributed-tracing]]), and the Docker Compose topology ([[10-docker-compose]]).
+---
 
-## Notes for presentation
+## 📝 Artifacts Created
 
-- The `api.http` file is the primary demo tool — open it in VS Code with the REST Client extension and walk through the sections in order.
-- The README's 10-step sample request sequence mirrors PLAN.md's 10-step verification checklist, making it easy to demo the full flow.
-- The saga failure section in `api.http` includes inline instructions for `docker compose stop orders` — this is the key "wow" moment for the demo.
-- The distributed tracing section in the README explains how traces span both HTTP and RabbitMQ, which is a unique educational aspect of this demo.
-
-## Next steps
-
-- All 11 implementation tickets are now complete. The project is fully delivered.
-- No further tickets are unblocked by this completion — this was the terminal ticket.
-- Potential future enhancements (fog-of-war items from MAP.md): Baskets consuming `ProductChanged` for price sync (already implemented), retry/dead-letter queue strategy, health check endpoints, and seed data configuration.
+- `api.http` — HTTP examples for all API operations (8 sections, full demo sequence)
+- `README.md` — Comprehensive project documentation with startup, routing, tracing, saga, verification
