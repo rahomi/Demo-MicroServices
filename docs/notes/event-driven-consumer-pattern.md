@@ -1,12 +1,5 @@
 ---
-ticket: "6"
 title: "Event-driven consumer pattern: consuming OrderSubmitted + ProductChanged"
-type: "task"
-date_completed: "2026-09-10"
-status: "completed"
-blocked_by: ["01-scaffold-solution"]
-blocks: ["07-bff-service", "10-docker-compose"]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 🔔 Notifications Service: Event-Driven Consumer Pattern
@@ -83,7 +76,7 @@ public class ReceivedEvents
 }
 ```
 
-> [:tip]
+> [!tip]
 > `ConcurrentBag<T>` is thread-safe by design. Multiple BackgroundServices can write concurrently while the API reads — no locks needed.
 
 ---
@@ -160,22 +153,16 @@ GET /api/notifications — returns all received events, most recent first
 - [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
 - [x] `GET /api/notifications` returns `[]` (empty — no RabbitMQ running locally)
 - [x] Both consumers registered as BackgroundServices, start on startup, retry RabbitMQ connection every 5s
-- [x] Full event flow verified via Docker Compose in [[10-docker-compose]]
+- [x] Full event flow verified via Docker Compose in [[docker-compose-and-containerization]]
 
 ---
 
 ## 📎 See Also
 
-- [[01-scaffold-solution]] — `EventConsumer<T>` base class
-- [[02-products-service]] — Publishes `ProductChanged` consumed here
-- [[05-orders-service]] — Publishes `OrderSubmitted` consumed here
-- [[10-docker-compose]] — Full event flow verified with Docker Compose
+- [[solution-scaffolding-and-contracts]] — `EventConsumer<T>` base class
+- [[cqrs-with-mediatr]] — Publishes `ProductChanged` consumed here
+- [[order-submission-and-events]] — Publishes `OrderSubmitted` consumed here
+- [[docker-compose-and-containerization]] — Full event flow verified with Docker Compose
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/Notifications/ReceivedEvents.cs` — Thread-safe store + ReceivedEvent record
-- `EcommerceDemo/Notifications/Consumers/OrderSubmittedConsumer.cs` — RabbitMQ consumer
-- `EcommerceDemo/Notifications/Consumers/ProductChangedConsumer.cs` — RabbitMQ consumer
-- `EcommerceDemo/Notifications/Program.cs` — Consumers, ReceivedEvents, Swagger, endpoint

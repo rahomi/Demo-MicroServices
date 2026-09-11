@@ -1,12 +1,5 @@
 ---
-ticket: "T03"
 title: "RabbitMQ messaging topology design"
-type: "task"
-date_completed: "2026-09-09"
-status: "completed"
-blocked_by: ["T01"]
-blocks: ["T04", "T05", "T06"]
-tags: [ticket-completion, concept-tutorial, decision]
 ---
 
 # 📡 RabbitMQ Messaging Topology Design
@@ -68,7 +61,7 @@ flowchart LR
 | Order submitted | `order.submitted` | Orders | Notifications |
 | Basket checked out | `basket.checkedout` | Baskets | (future) |
 
-> [:info]
+> [!info]
 > Dot-separated routing keys (`product.changed`) are human-readable and support RabbitMQ's topic wildcard matching (`product.*` matches all product events). This is simpler than header-based routing.
 
 ---
@@ -160,16 +153,11 @@ public abstract class EventConsumer<T> : BackgroundService
 
 ## 📎 See Also
 
-- [[01-scaffold-solution]] — Implementation of the publisher, consumer, and connection
-- [[02-products-service]] — First service to publish events (`ProductChanged`)
-- [[03-baskets-service]] — First service to consume events (`ProductChangedConsumer`)
-- [[06-notifications-service]] — Consumes both `OrderSubmitted` and `ProductChanged`
-- [[09-distributed-tracing]] — OpenTelemetry SDK registration (uses the traceparent infrastructure)
+- [[solution-scaffolding-and-contracts]] — Implementation of the publisher, consumer, and connection
+- [[cqrs-with-mediatr]] — First service to publish events (`ProductChanged`)
+- [[basket-operations-and-event-consumer]] — First service to consume events (`ProductChangedConsumer`)
+- [[event-driven-consumer-pattern]] — Consumes both `OrderSubmitted` and `ProductChanged`
+- [[distributed-tracing-with-opentelemetry]] — OpenTelemetry SDK registration (uses the traceparent infrastructure)
 
 ---
 
-## 📝 Artifacts Created
-
-- `tracker/tickets/T03-rabbitmq-contracts-and-connection-design.md` — Resolution section (documentation only, no code changes)
-- `tracker/MAP.md` — T03 marked resolved
-- `docs/project-evolution.md` — T03 marked ✅ Done

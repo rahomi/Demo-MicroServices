@@ -1,12 +1,5 @@
 ---
-ticket: "2"
 title: "CQRS with MediatR + EF Core InMemory + CRUD + Integration Events + Swagger"
-type: "task"
-date_completed: "2026-09-10"
-status: "completed"
-blocked_by: ["01-scaffold-solution"]
-blocks: ["07-bff-service", "03-baskets-service"]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 📦 Products Service: CQRS with MediatR + EF Core + Integration Events
@@ -265,18 +258,10 @@ app.UseSwaggerUI();
 
 ## 📎 See Also
 
-- [[01-scaffold-solution]] — Contracts project with `IEventPublisher` used here
-- [[03-baskets-service]] — Consumes `ProductChanged` events from this service
-- [[07-bff-service]] — BFF proxies these endpoints
-- [[T03-rabbitmq-contracts-design]] — RabbitMQ topology design
+- [[solution-scaffolding-and-contracts]] — Contracts project with `IEventPublisher` used here
+- [[basket-operations-and-event-consumer]] — Consumes `ProductChanged` events from this service
+- [[backend-for-frontend-pattern]] — BFF proxies these endpoints
+- [[rabbitmq-messaging-topology]] — RabbitMQ topology design
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/Products/Domain/Product.cs` — Product entity
-- `EcommerceDemo/Products/Data/ProductDbContext.cs` — EF Core InMemory DbContext
-- `EcommerceDemo/Products/Data/ProductDbSeeder.cs` — Seeds 5 products
-- `EcommerceDemo/Products/Features/Queries/GetProducts.cs` — Query handlers
-- `EcommerceDemo/Products/Features/Commands/CreateProduct.cs` — Command handlers with event publishing
-- `EcommerceDemo/Products/Program.cs` — MediatR, EF Core, RabbitMQ, Swagger, endpoints

@@ -1,12 +1,5 @@
 ---
-ticket: "4"
 title: "Minimal service boundary: fake identity endpoint"
-type: "task"
-date_completed: "2026-09-10"
-status: "completed"
-blocked_by: ["01-scaffold-solution"]
-blocks: ["07-bff-service"]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 🔑 Identity Service: Minimal Service Boundary
@@ -98,12 +91,8 @@ Same `AddSwaggerGen` / `UseSwagger` / `UseSwaggerUI` as all other services
 
 ## 📎 See Also
 
-- [[01-scaffold-solution]] — Scaffold created the Identity project
-- [[07-bff-service]] — BFF proxies the Identity endpoint
+- [[solution-scaffolding-and-contracts]] — Scaffold created the Identity project
+- [[backend-for-frontend-pattern]] — BFF proxies the Identity endpoint
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/Identity/Program.cs` — Single endpoint + Swagger UI
-- `EcommerceDemo/Identity/Identity.csproj` — Added Swashbuckle.AspNetCore

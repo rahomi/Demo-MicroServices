@@ -1,12 +1,5 @@
 ---
-ticket: "10"
 title: "Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger"
-type: "task"
-date_completed: "2026-09-11"
-status: "completed"
-blocked_by: [7, 6, 9]
-blocks: [11]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 🐳 Docker Compose: Containerization + Service Discovery + Healthchecks
@@ -211,25 +204,14 @@ docker compose up --build
 
 ## 📎 See Also
 
-- [[02-products-service]] — Products service containerized
-- [[03-baskets-service]] — Baskets service containerized
-- [[04-identity-service]] — Identity service containerized
-- [[05-orders-service]] — Orders service containerized
-- [[06-notifications-service]] — Notifications service containerized
-- [[07-bff-service]] — BFF service containerized
-- [[08-saga-orchestration]] — Saga endpoints for full stack testing
-- [[09-distributed-tracing]] — OpenTelemetry configuration (Jaeger container)
+- [[cqrs-with-mediatr]] — Products service containerized
+- [[basket-operations-and-event-consumer]] — Baskets service containerized
+- [[minimal-service-boundary]] — Identity service containerized
+- [[order-submission-and-events]] — Orders service containerized
+- [[event-driven-consumer-pattern]] — Notifications service containerized
+- [[backend-for-frontend-pattern]] — BFF service containerized
+- [[saga-pattern-with-compensation]] — Saga endpoints for full stack testing
+- [[distributed-tracing-with-opentelemetry]] — OpenTelemetry configuration (Jaeger container)
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/BFF/Dockerfile` — Multi-stage Dockerfile
-- `EcommerceDemo/Products/Dockerfile` — Multi-stage Dockerfile
-- `EcommerceDemo/Baskets/Dockerfile` — Multi-stage Dockerfile
-- `EcommerceDemo/Orders/Dockerfile` — Multi-stage Dockerfile
-- `EcommerceDemo/Notifications/Dockerfile` — Multi-stage Dockerfile
-- `EcommerceDemo/Identity/Dockerfile` — Multi-stage Dockerfile
-- `EcommerceDemo/.dockerignore` — Excludes bin/obj/.vs/.git
-- `docker-compose.yml` — 8-service topology
-- `docker-compose.override.yml` — Local dev overrides

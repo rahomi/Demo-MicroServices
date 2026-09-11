@@ -1,12 +1,5 @@
 ---
-ticket: "9"
 title: "Distributed tracing: OpenTelemetry + Jaeger"
-type: "task"
-date_completed: "2026-09-11"
-status: "completed"
-blocked_by: [1]
-blocks: [10, 11]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 🔍 Distributed Tracing: OpenTelemetry + Jaeger
@@ -74,7 +67,7 @@ sequenceDiagram
 ```
 
 > [!info]
-> The trace crosses the **async messaging boundary** because `EventPublisher` injects the W3C `traceparent` header into RabbitMQ message properties, and `EventConsumer` extracts it to create a **linked activity**. This was built in [[01-scaffold-solution]] — this ticket just wires up the SDK.
+> The trace crosses the **async messaging boundary** because `EventPublisher` injects the W3C `traceparent` header into RabbitMQ message properties, and `EventConsumer` extracts it to create a **linked activity**. This was built in [[solution-scaffolding-and-contracts]] — this ticket just wires up the SDK.
 
 ---
 
@@ -140,7 +133,7 @@ builder.Services.AddOpenTelemetryTracing(builder.Configuration);
 |-----------------|----------------|--------|
 | `AddAspNetCoreInstrumentation` | Incoming HTTP requests | `OpenTelemetry.Instrumentation.AspNetCore` |
 | `AddHttpClientInstrumentation` | Outgoing HTTP calls (BFF → downstream) | `OpenTelemetry.Instrumentation.Http` |
-| `AddSource("RabbitMQ")` | Custom spans from `EventPublisher`/`EventConsumer` | (uses ActivitySource from Ticket 1) |
+| `AddSource("RabbitMQ")` | Custom spans from `EventPublisher`/`EventConsumer` | (uses ActivitySource from ) |
 | `AddOtlpExporter` | Exports traces to Jaeger via OTLP gRPC | `OpenTelemetry.Exporter.OpenTelemetryProtocol` |
 
 ---
@@ -159,7 +152,7 @@ One line per service: `builder.Services.AddOpenTelemetryTracing(builder.Configur
 ### Step 4 — Add config to all 6 appsettings.json
 `OTEL_SERVICE_NAME` (unique per service) + `OTEL_EXPORTER_OTLP_ENDPOINT`
 
-### Step 5 — Add Jaeger container (done in [[10-docker-compose]])
+### Step 5 — Add Jaeger container (done in [[docker-compose-and-containerization]])
 `jaegertracing/all-in-one:1.62` with `COLLECTOR_OTLP_ENABLED=true`, ports 16686 (UI) + 4317 (OTLP)
 
 ---
@@ -178,22 +171,16 @@ One line per service: `builder.Services.AddOpenTelemetryTracing(builder.Configur
 ## ✅ Testing & Verification
 
 - [x] Build verification — 0 errors, 0 warnings
-- [x] Full stack verification (Docker Compose + Jaeger) — verified in [[10-docker-compose]]
-- [x] Trace visibility in Jaeger UI — Jaeger container added in [[10-docker-compose]]
+- [x] Full stack verification (Docker Compose + Jaeger) — verified in [[docker-compose-and-containerization]]
+- [x] Trace visibility in Jaeger UI — Jaeger container added in [[docker-compose-and-containerization]]
 
 ---
 
 ## 📎 See Also
 
-- [[01-scaffold-solution]] — Traceparent injection/extraction built here (EventPublisher + EventConsumer)
-- [[10-docker-compose]] — Jaeger container + OTLP endpoint configuration
-- [[11-http-examples-and-readme]] — README with Jaeger UI access instructions
+- [[solution-scaffolding-and-contracts]] — Traceparent injection/extraction built here (EventPublisher + EventConsumer)
+- [[docker-compose-and-containerization]] — Jaeger container + OTLP endpoint configuration
+- [[api-documentation]] — README with Jaeger UI access instructions
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/Contracts/Messaging/OpenTelemetryExtensions.cs` — Shared `AddOpenTelemetryTracing()` method
-- `EcommerceDemo/Contracts/Contracts.csproj` — 4 OpenTelemetry package references
-- All 6 service `Program.cs` files — OpenTelemetry registration
-- All 6 `appsettings.json` files — `OTEL_SERVICE_NAME` + `OTEL_EXPORTER_OTLP_ENDPOINT`

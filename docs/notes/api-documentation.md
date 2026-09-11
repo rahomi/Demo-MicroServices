@@ -1,12 +1,5 @@
 ---
-ticket: "11"
 title: "API documentation: .http files + comprehensive README"
-type: "task"
-date_completed: "2026-09-11"
-status: "completed"
-blocked_by: ["10-docker-compose", "08-saga-orchestration", "09-distributed-tracing"]
-blocks: []
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 📖 API Documentation: .http Files + Comprehensive README
@@ -22,7 +15,7 @@ tags: [ticket-completion, concept-tutorial]
 
 - Structure an `api.http` file with **variables and sections** for all API operations
 - Write a README that covers **startup, routing, tracing, saga, and verification**
-- Create a **10-step demo sequence** that mirrors the PLAN.md verification checklist
+- Create a **10-step demo sequence** that mirrors the  verification checklist
 - Document the **saga failure simulation** (stop orders container, checkout, verify basket restored)
 
 ---
@@ -133,7 +126,7 @@ docker compose up --build
 [How traceparent crosses HTTP + RabbitMQ]
 
 ## 10-Step Verification
-[Mirrors PLAN.md checklist]
+[Mirrors  checklist]
 ```
 
 ---
@@ -159,9 +152,9 @@ Developer confirmed "yes" at the Step 5 gate
 | Decision | Choice | Why |
 |----------|--------|-----|
 | Single `api.http` at root | Not scattered per-service | Complete, navigable API reference in one file |
-| README covers Docker + local dev | Both paths | PLAN.md requires both |
+| README covers Docker + local dev | Both paths |  requires both |
 | curl commands in README | Not just .http | Copy-paste in any terminal, no VS Code needed |
-| 10-step sequence | Mirrors PLAN.md | Easy to demo the full flow |
+| 10-step sequence | Mirrors  | Easy to demo the full flow |
 
 ---
 
@@ -174,19 +167,15 @@ Developer confirmed "yes" at the Step 5 gate
 
 ## 📎 See Also
 
-- [[02-products-service]] — Products endpoints documented
-- [[03-baskets-service]] — Baskets endpoints documented
-- [[04-identity-service]] — Identity endpoint documented
-- [[05-orders-service]] — Orders endpoints documented
-- [[06-notifications-service]] — Notifications endpoint documented
-- [[07-bff-service]] — BFF routing map documented
-- [[08-saga-orchestration]] — Saga pattern documented in README
-- [[09-distributed-tracing]] — Tracing documented in README
-- [[10-docker-compose]] — Docker Compose startup documented in README
+- [[cqrs-with-mediatr]] — Products endpoints documented
+- [[basket-operations-and-event-consumer]] — Baskets endpoints documented
+- [[minimal-service-boundary]] — Identity endpoint documented
+- [[order-submission-and-events]] — Orders endpoints documented
+- [[event-driven-consumer-pattern]] — Notifications endpoint documented
+- [[backend-for-frontend-pattern]] — BFF routing map documented
+- [[saga-pattern-with-compensation]] — Saga pattern documented in README
+- [[distributed-tracing-with-opentelemetry]] — Tracing documented in README
+- [[docker-compose-and-containerization]] — Docker Compose startup documented in README
 
 ---
 
-## 📝 Artifacts Created
-
-- `api.http` — HTTP examples for all API operations (8 sections, full demo sequence)
-- `README.md` — Comprehensive project documentation with startup, routing, tracing, saga, verification

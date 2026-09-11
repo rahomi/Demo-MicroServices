@@ -1,83 +1,46 @@
 ---
-title: "Project Evolution — Chapter 19 Microservices Expansion"
+title: "Project Evolution — EcommerceDemo Microservices"
 created: "2026-09-09"
 tags: [index, obsidian, evolution]
 ---
 
-# 📊 Project Evolution — Chapter 19 Microservices Expansion
+# 📊 Project Evolution — EcommerceDemo Microservices
 
-This is the **Obsidian index** for tracking the project's growth. Every ticket completion gets a note in `docs/notes/`. This index links them in dependency order so you can present the project's evolution as a narrative.
+This is the **Obsidian index** for the project's concept notes. Each note in `docs/notes/` covers a concept implemented in the EcommerceDemo microservices project — from solution scaffolding to saga orchestration and distributed tracing.
 
-## 🗺️ Planning Artifacts
+## 📝 Concept Notes (in order of implementation)
 
-- [[PLAN]] — The 9-section plan (source of truth)
-- [[MAP]] — Wayfinder map with decision tickets and blocking edges
-- [[tickets]] — Tracer-bullet implementation tickets with acceptance criteria
-
-## 📋 Decision Tickets (Wayfinder)
-
-| Ticket | Title | Status | Completion Note |
-|--------|-------|--------|-----------------|
-| T01 | Verify .NET SDK and establish solution/project structure | ✅ Done | [[01-scaffold-solution]] |
-| T02 | MediatR migration strategy for Products and Baskets | ⬜ Open | — |
-| T03 | RabbitMQ contracts and connection infrastructure design | ✅ Done | [[T03-rabbitmq-contracts-design]] |
-| T04 | BFF routing map and Refit client contracts | ⬜ Open | — |
-| T05 | Orders and Identity service design | ⬜ Open | — |
-| T06 | Notifications service and event flow design | ⬜ Open | — |
-| T07 | Docker Compose topology and port map | ⬜ Open | — |
-| T08 | HTTP examples and README content | ⬜ Open | — |
-| T09 | Saga orchestration and compensation design | ⬜ Open | — |
-| T10 | OpenTelemetry + Jaeger distributed tracing design | ⬜ Open | — |
-
-## 🚀 Implementation Tickets (Tracer Bullets)
-
-| # | Ticket | Status | Completion Note |
-|---|--------|--------|-----------------|
-| 1 | Scaffold solution, projects, and shared Contracts | ✅ Done | [[01-scaffold-solution]] |
-| 2 | Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged | ✅ Done | [[02-products-service]] |
-| 3 | Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut | ✅ Done | [[03-baskets-service]] |
-| 4 | Identity service: fake customer endpoint | ✅ Done | [[04-identity-service]] |
-| 5 | Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted | ✅ Done | [[05-orders-service]] |
-| 6 | Notifications service: RabbitMQ consumer + received events endpoint | ✅ Done | [[06-notifications-service]] |
-| 7 | BFF: Refit clients + routing map + checkout orchestration | ✅ Done | [[07-bff-service]] |
-| 8 | Saga pattern: orchestration-based checkout with compensating transactions | ✅ Done | [[08-saga-orchestration]] |
-| 9 | Distributed tracing: OpenTelemetry + Jaeger | ✅ Done | [[09-distributed-tracing]] |
-| 10 | Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger | ✅ Done | [[10-docker-compose]] |
-| 11 | HTTP examples + README documentation | ✅ Done | [[11-http-examples-and-readme]] |
-
-## 📝 Completion Notes (in order of completion)
-
-> As each ticket is completed, create a note from the [template](templates/ticket-completion.md) and link it here. The notes form the project's evolution narrative.
-
-1. [[01-scaffold-solution]] — Scaffold EcommerceDemo solution, projects, and shared Contracts (T01 + Ticket 1)
-2. [[T03-rabbitmq-contracts-design]] — RabbitMQ contracts and connection infrastructure design (T03)
-3. [[02-products-service]] — Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged + Swagger UI (Ticket 2)
-4. [[03-baskets-service]] — Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut + ProductChanged consumer + Swagger UI (Ticket 3)
-5. [[04-identity-service]] — Identity service: fake customer endpoint + Swagger UI (Ticket 4)
-6. [[05-orders-service]] — Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted + Swagger UI (Ticket 5)
-7. [[06-notifications-service]] — Notifications service: RabbitMQ consumer + received events endpoint + Swagger UI (Ticket 6)
-8. [[07-bff-service]] — BFF: Refit clients + routing map + checkout orchestration + error handling + Swagger UI (Ticket 7)
-9. [[08-saga-orchestration]] — Saga pattern: orchestration-based checkout with compensating transactions (Ticket 8)
-10. [[09-distributed-tracing]] — Distributed tracing: OpenTelemetry + Jaeger (Ticket 9)
-11. [[10-docker-compose]] — Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger (Ticket 10)
-12. [[11-http-examples-and-readme]] — HTTP examples + README documentation (Ticket 11)
-13. [[retrospective]] — Project retrospective: lessons learned, surprises, and what we'd do differently
-
-## 🏷️ Tag Legend
-
-- `#ticket-completion` — A note documenting a completed ticket
-- `#decision` — A note documenting a key architectural decision
-- `#demo` — A note documenting a demo or presentation
-- `#retrospective` — A note documenting lessons learned
+1. [[solution-scaffolding-and-contracts]] — Solution scaffolding, shared Contracts project, RabbitMQ infrastructure, W3C traceparent injection
+2. [[rabbitmq-messaging-topology]] — RabbitMQ messaging topology design (amq.topic exchange, routing keys, queue naming, publisher/consumer contracts)
+3. [[cqrs-with-mediatr]] — CQRS with MediatR, EF Core InMemory, CRUD endpoints, integration events, Swagger UI
+4. [[basket-operations-and-event-consumer]] — Basket operations, RabbitMQ event consumer, EF Core InMemory change tracking gotchas
+5. [[minimal-service-boundary]] — Minimal service boundary (intentionally simple service with no DB, no messaging)
+6. [[order-submission-and-events]] — Order submission, server-side total calculation, OrderSubmitted event
+7. [[event-driven-consumer-pattern]] — Event-driven consumer pattern, thread-safe in-memory store, pub-sub with separate queues
+8. [[backend-for-frontend-pattern]] — Backend for Frontend pattern, Refit typed HTTP clients, routing map, checkout orchestration, error handling
+9. [[saga-pattern-with-compensation]] — Saga orchestration pattern, state machine, compensating transactions, basket snapshot
+10. [[distributed-tracing-with-opentelemetry]] — Distributed tracing with OpenTelemetry + Jaeger, W3C traceparent propagation across HTTP and RabbitMQ
+11. [[docker-compose-and-containerization]] — Docker Compose, multi-stage Dockerfiles, service discovery, healthchecks, 8-container topology
+12. [[api-documentation]] — API documentation with .http files and comprehensive README
 
 ## 📂 Folder Structure
 
 ```
 docs/
 ├── project-evolution.md      ← THIS FILE (Obsidian index)
-├── templates/
-│   └── ticket-completion.md  ← Template for completion notes
-├── notes/                    ← Completion notes go here
-│   └── (T01-verify-sdk.md, T02-mediatr.md, etc.)
-└── WORKFLOW.md               ← Developer workflow guide
+├── WORKFLOW.md               ← Developer workflow guide
+├── templates/                ← Note templates
+└── notes/                    ← Concept notes
+    ├── solution-scaffolding-and-contracts.md
+    ├── rabbitmq-messaging-topology.md
+    ├── cqrs-with-mediatr.md
+    ├── basket-operations-and-event-consumer.md
+    ├── minimal-service-boundary.md
+    ├── order-submission-and-events.md
+    ├── event-driven-consumer-pattern.md
+    ├── backend-for-frontend-pattern.md
+    ├── saga-pattern-with-compensation.md
+    ├── distributed-tracing-with-opentelemetry.md
+    ├── docker-compose-and-containerization.md
+    └── api-documentation.md
 ```

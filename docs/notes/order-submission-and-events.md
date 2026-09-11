@@ -1,12 +1,5 @@
 ---
-ticket: "5"
 title: "Order submission with MediatR CQRS + server-side total + OrderSubmitted event"
-type: "task"
-date_completed: "2026-09-10"
-status: "completed"
-blocked_by: ["01-scaffold-solution"]
-blocks: ["07-bff-service", "08-saga-orchestration"]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 📋 Orders Service: CQRS + Server-Side Calculation + OrderSubmitted Event
@@ -204,17 +197,11 @@ GET  /api/orders?customerId={id}      — list by customer
 
 ## 📎 See Also
 
-- [[01-scaffold-solution]] — Contracts with `OrderSubmitted` event DTO
-- [[03-baskets-service]] — Explicit FK pattern discovered here
-- [[06-notifications-service]] — Consumes `OrderSubmitted` events
-- [[07-bff-service]] — BFF proxies order endpoints
-- [[08-saga-orchestration]] — Saga uses order submit + cancel
+- [[solution-scaffolding-and-contracts]] — Contracts with `OrderSubmitted` event DTO
+- [[basket-operations-and-event-consumer]] — Explicit FK pattern discovered here
+- [[event-driven-consumer-pattern]] — Consumes `OrderSubmitted` events
+- [[backend-for-frontend-pattern]] — BFF proxies order endpoints
+- [[saga-pattern-with-compensation]] — Saga uses order submit + cancel
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/Orders/Domain/Order.cs` — Order + OrderItem models
-- `EcommerceDemo/Orders/Data/OrderDbContext.cs` — EF Core InMemory DbContext
-- `EcommerceDemo/Orders/Features/Queries/GetOrders.cs` — Query handlers
-- `EcommerceDemo/Orders/Features/Commands/SubmitOrder.cs` — Submit handler with event publishing

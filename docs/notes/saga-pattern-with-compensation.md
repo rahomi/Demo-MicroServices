@@ -1,12 +1,5 @@
 ---
-ticket: "8"
 title: "Saga pattern: orchestration-based checkout with compensating transactions"
-type: "task"
-date_completed: "2026-09-11"
-status: "completed"
-blocked_by: ["7"]
-blocks: ["10", "11"]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 🔄 Saga Pattern: Orchestration-Based Checkout with Compensating Transactions
@@ -14,7 +7,7 @@ tags: [ticket-completion, concept-tutorial]
 > [!abstract]
 > **Core Idea**
 >
-> The synchronous checkout (Ticket 7) has a fatal flaw: if Baskets succeeds but Orders fails, the basket is cleared with no order created. The **saga pattern** fixes this by tracking state, executing steps in order, and running **compensating transactions** in reverse on failure. This note shows the code diff from synchronous → saga, the state machine, and the compensation flow.
+> The synchronous checkout has a fatal flaw: if Baskets succeeds but Orders fails, the basket is cleared with no order created. The **saga pattern** fixes this by tracking state, executing steps in order, and running **compensating transactions** in reverse on failure. This note shows the code diff from synchronous → saga, the state machine, and the compensation flow.
 
 ---
 
@@ -77,7 +70,7 @@ stateDiagram-v2
 
 ### 3. Code Diff: Synchronous Checkout vs Saga
 
-**Before (synchronous — Ticket 7):**
+**Before (synchronous):**
 
 ```csharp
 // ❌ No state tracking, no compensation
@@ -89,7 +82,7 @@ app.MapPost("/api/baskets/{customerId}/checkout", async (string customerId, IBas
 });
 ```
 
-**After (saga — Ticket 8):**
+**After (saga):**
 
 ```csharp
 // ✅ State tracked, compensation on failure
@@ -240,30 +233,16 @@ EF Core InMemory, `DbSet<SagaState>`
 ## ✅ Testing & Verification
 
 - [x] `dotnet build EcommerceDemo.slnx` — 0 errors, 0 warnings
-- [x] Full stack verification (Docker Compose with saga failure simulation) — verified in [[10-docker-compose]]
+- [x] Full stack verification (Docker Compose with saga failure simulation) — verified in [[docker-compose-and-containerization]]
 
 ---
 
 ## 📎 See Also
 
-- [[07-bff-service]] — Synchronous checkout (the "before" that saga replaces)
-- [[03-baskets-service]] — Basket restore endpoint (compensating action)
-- [[05-orders-service]] — Order cancel endpoint (compensating action)
-- [[10-docker-compose]] — Docker Compose for full stack testing
+- [[backend-for-frontend-pattern]] — Synchronous checkout (the "before" that saga replaces)
+- [[basket-operations-and-event-consumer]] — Basket restore endpoint (compensating action)
+- [[order-submission-and-events]] — Order cancel endpoint (compensating action)
+- [[docker-compose-and-containerization]] — Docker Compose for full stack testing
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/Baskets/Features/Commands/RestoreBasket.cs` — Compensating action
-- `EcommerceDemo/Orders/Features/Commands/CancelOrder.cs` — Compensating action
-- `EcommerceDemo/BFF/Saga/SagaState.cs` — SagaStatus enum + SagaState entity
-- `EcommerceDemo/BFF/Saga/SagaDbContext.cs` — EF Core InMemory for saga state
-- `EcommerceDemo/BFF/Saga/CheckoutSagaOrchestrator.cs` — 3-step saga with compensation
-
-## 📝 Artifacts Modified
-
-- `EcommerceDemo/Baskets/Program.cs` — Added restore endpoint
-- `EcommerceDemo/Orders/Program.cs` — Added cancel endpoint
-- `EcommerceDemo/BFF/Program.cs` — Registered SagaDbContext + orchestrator, replaced checkout
-- `EcommerceDemo/BFF/Clients/IDownstreamClients.cs` — Added RestoreBasketAsync, CancelOrderAsync

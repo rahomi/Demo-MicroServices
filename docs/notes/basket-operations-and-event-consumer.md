@@ -1,12 +1,5 @@
 ---
-ticket: "3"
 title: "Basket operations + Event Consumer + EF Core change tracking"
-type: "task"
-date_completed: "2026-09-10"
-status: "completed"
-blocked_by: ["01-scaffold-solution"]
-blocks: ["07-bff-service", "08-saga-orchestration"]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 🛒 Baskets Service: Basket Ops + Event Consumer + EF Core Gotchas
@@ -284,17 +277,10 @@ POST   /api/baskets/{customerId}/checkout          — checkout (clears basket, 
 
 ## 📎 See Also
 
-- [[01-scaffold-solution]] — `EventConsumer<T>` base class
-- [[02-products-service]] — Publishes `ProductChanged` events consumed here
-- [[07-bff-service]] — BFF proxies basket endpoints
-- [[08-saga-orchestration]] — Saga uses basket checkout + restore endpoints
+- [[solution-scaffolding-and-contracts]] — `EventConsumer<T>` base class
+- [[cqrs-with-mediatr]] — Publishes `ProductChanged` events consumed here
+- [[backend-for-frontend-pattern]] — BFF proxies basket endpoints
+- [[saga-pattern-with-compensation]] — Saga uses basket checkout + restore endpoints
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/Baskets/Domain/Basket.cs` — Basket + BasketItem models
-- `EcommerceDemo/Baskets/Data/BasketDbContext.cs` — EF Core InMemory DbContext
-- `EcommerceDemo/Baskets/Features/Queries/GetBasket.cs` — Query handler
-- `EcommerceDemo/Baskets/Features/Commands/BasketCommands.cs` — Add/Remove/Checkout handlers
-- `EcommerceDemo/Baskets/Features/Consumers/ProductChangedConsumer.cs` — RabbitMQ consumer

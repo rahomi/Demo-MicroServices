@@ -1,12 +1,5 @@
 ---
-ticket: "7"
 title: "Backend for Frontend: Refit clients + routing map + checkout orchestration"
-type: "task"
-date_completed: "2026-09-10"
-status: "completed"
-blocked_by: ["02-products-service", "03-baskets-service", "04-identity-service", "05-orders-service"]
-blocks: ["08-saga-orchestration", "10-docker-compose"]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 🌐 BFF Service: Backend for Frontend Pattern
@@ -135,7 +128,7 @@ sequenceDiagram
 ```
 
 > [!danger]
-> If Baskets succeeds but Orders fails, the basket is **already cleared** but no order exists. This is the **data inconsistency** that motivates the saga pattern in [[08-saga-orchestration]].
+> If Baskets succeeds but Orders fails, the basket is **already cleared** but no order exists. This is the **data inconsistency** that motivates the saga pattern in [[saga-pattern-with-compensation]].
 
 ---
 
@@ -166,7 +159,7 @@ static IResult HandleDownstreamError(Exception ex)
 }
 ```
 
-> [:info]
+> [!info]
 > `Refit.ApiException` propagates the downstream status code (404, 400, etc.). `HttpRequestException` means the service is unreachable → 503. This prevents unhandled exceptions when downstream services are down.
 
 ---
@@ -205,7 +198,7 @@ All endpoints from all services visible in one Swagger page
 |----------|--------|-----|
 | HTTP client | Refit 8.0.0 | Auto-generates from interfaces, reduces boilerplate |
 | BFF port | 5000 | Standard API gateway port, easy to remember |
-| Checkout | Synchronous (for now) | Baseline for saga comparison — saga replaces this in Ticket 8 |
+| Checkout | Synchronous (for now) | Baseline for saga comparison — saga replaces this in  |
 | Error handling | `HandleDownstreamError` helper | Prevents unhandled exceptions, clean JSON responses |
 | RabbitMQ | None in BFF | BFF orchestrates via HTTP, not events |
 
@@ -216,23 +209,17 @@ All endpoints from all services visible in one Swagger page
 - [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
 - [x] BFF starts on port 5000, Swagger UI accessible
 - [x] Error handling: downstream unreachable → clean 503 JSON
-- [x] Full end-to-end test verified via Docker Compose in [[10-docker-compose]]
+- [x] Full end-to-end test verified via Docker Compose in [[docker-compose-and-containerization]]
 
 ---
 
 ## 📎 See Also
 
-- [[02-products-service]] — Products endpoints proxied by BFF
-- [[03-baskets-service]] — Baskets endpoints proxied by BFF
-- [[05-orders-service]] — Orders endpoints proxied by BFF
-- [[08-saga-orchestration]] — Saga replaces the synchronous checkout
-- [[10-docker-compose]] — BFF containerized with Docker
+- [[cqrs-with-mediatr]] — Products endpoints proxied by BFF
+- [[basket-operations-and-event-consumer]] — Baskets endpoints proxied by BFF
+- [[order-submission-and-events]] — Orders endpoints proxied by BFF
+- [[saga-pattern-with-compensation]] — Saga replaces the synchronous checkout
+- [[docker-compose-and-containerization]] — BFF containerized with Docker
 
 ---
 
-## 📝 Artifacts Created
-
-- `EcommerceDemo/BFF/Clients/IDownstreamClients.cs` — Refit interfaces + DTOs
-- `EcommerceDemo/BFF/Program.cs` — Routing map, checkout, error handling, Swagger
-- `EcommerceDemo/BFF/appsettings.json` — Downstream URLs config
-- `EcommerceDemo/BFF/BFF.csproj` — Refit, Refit.HttpClientFactory, Swashbuckle

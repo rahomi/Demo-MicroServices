@@ -11,14 +11,10 @@
             "id": "d7e3b807fc8dd824",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "retrospective.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "retrospective"
+              "title": "New tab"
             }
           }
         ]
@@ -168,10 +164,22 @@
   },
   "active": "d7e3b807fc8dd824",
   "lastOpenFiles": [
+    "rabbitmq-messaging-topology.md",
+    "api-documentation.md",
+    "docker-compose-and-containerization.md",
+    "distributed-tracing-with-opentelemetry.md",
+    "saga-pattern-with-compensation.md",
+    "backend-for-frontend-pattern.md",
+    "event-driven-consumer-pattern.md",
+    "order-submission-and-events.md",
+    "minimal-service-boundary.md",
+    "basket-operations-and-event-consumer.md",
+    "cqrs-with-mediatr.md",
+    "solution-scaffolding-and-contracts.md",
+    "retrospective.md",
     "README.md",
     "01-scaffold-solution.md",
     "11-http-examples-and-readme.md",
-    "retrospective.md",
     "T03-rabbitmq-contracts-design.md",
     "05-orders-service.md",
     "04-identity-service.md",

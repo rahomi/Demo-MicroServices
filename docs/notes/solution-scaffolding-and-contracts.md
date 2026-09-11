@@ -1,12 +1,5 @@
 ---
-ticket: "1"
 title: "Solution scaffolding and shared Contracts infrastructure"
-type: "task"
-date_completed: "2026-09-09"
-status: "completed"
-blocked_by: []
-blocks: ["T03", "2", "3", "4", "5", "6", "9"]
-tags: [ticket-completion, concept-tutorial]
 ---
 
 # 🏗️ Solution Scaffolding & Shared Contracts Infrastructure
@@ -246,7 +239,7 @@ public async Task PublishAsync<T>(string exchange, string routingKey, T @event)
 ```
 
 > [!tip]
-> Building in traceparent injection from day one means the distributed tracing ticket (Ticket 9) is just SDK registration — no refactoring needed.
+> Building in traceparent injection from day one means the distributed tracing note is just SDK registration — no refactoring needed.
 
 ---
 
@@ -375,21 +368,9 @@ Build succeeded.
 
 ## 📎 See Also
 
-- [[T03-rabbitmq-contracts-design]] — RabbitMQ contracts design decision ticket
-- [[02-products-service]] — First service using CQRS + MediatR
-- [[09-distributed-tracing]] — OpenTelemetry SDK registration (uses the traceparent infrastructure built here)
-- [[retrospective]] — Lessons learned from the project
+- [[rabbitmq-messaging-topology]] — RabbitMQ messaging topology design
+- [[cqrs-with-mediatr]] — First service using CQRS + MediatR
+- [[distributed-tracing-with-opentelemetry]] — OpenTelemetry SDK registration (uses the traceparent infrastructure built here)
 
 ---
 
-## 📝 Artifacts Created
-
-- `Directory.Build.props` — shared build settings
-- `EcommerceDemo.slnx` — solution file
-- `EcommerceDemo/Contracts/Events/IntegrationEvents.cs` — event DTOs
-- `EcommerceDemo/Contracts/Messaging/IRabbitMqConnection.cs` — connection interface
-- `EcommerceDemo/Contracts/Messaging/RabbitMqConnection.cs` — persistent connection
-- `EcommerceDemo/Contracts/Messaging/IEventPublisher.cs` — publisher interface
-- `EcommerceDemo/Contracts/Messaging/EventPublisher.cs` — publisher with traceparent injection
-- `EcommerceDemo/Contracts/Messaging/EventConsumer.cs` — consumer base class
-- `EcommerceDemo/Contracts/Messaging/ServiceCollectionExtensions.cs` — DI registration helper
