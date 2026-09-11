@@ -43,7 +43,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 | 8 | Saga pattern: orchestration-based checkout with compensating transactions | ✅ Done | [[08-saga-orchestration]] |
 | 9 | Distributed tracing: OpenTelemetry + Jaeger | ✅ Done | [[09-distributed-tracing]] |
 | 10 | Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger | ✅ Done | [[10-docker-compose]] |
-| 11 | HTTP examples + README documentation | ⬜ Open | — |
+| 11 | HTTP examples + README documentation | ✅ Done | [[11-http-examples-and-readme]] |
 
 ## 📝 Completion Notes (in order of completion)
 
@@ -60,6 +60,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 9. [[08-saga-orchestration]] — Saga pattern: orchestration-based checkout with compensating transactions (Ticket 8)
 10. [[09-distributed-tracing]] — Distributed tracing: OpenTelemetry + Jaeger (Ticket 9)
 11. [[10-docker-compose]] — Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger (Ticket 10)
+12. [[11-http-examples-and-readme]] — HTTP examples + README documentation (Ticket 11)
 
 ## 🏷️ Tag Legend
 
