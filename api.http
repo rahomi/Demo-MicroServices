@@ -1,0 +1,286 @@
+### EcommerceDemo — API HTTP Examples
+###
+### All requests go through the BFF on port 5000.
+### To test a downstream service directly, swap the @bff variable for the
+### service-specific variable (e.g. @products, @baskets) and adjust the path
+### (the BFF adds /api/identity/ prefix for Identity; downstream services use /api/customer).
+###
+### Usage in VS Code: install the "REST Client" extension, then click "Send Request"
+### above each request block.
+
+### ───────────────────────────────────────────────
+### Variables
+### ───────────────────────────────────────────────
+
+@bff = http://localhost:5000
+@products = http://localhost:5001
+@baskets = http://localhost:5002
+@orders = http://localhost:5003
+@notifications = http://localhost:5004
+@identity = http://localhost:5005
+
+### Seeded product IDs (available after Products service starts)
+@productId1 = 11111111-1111-1111-1111-111111111111
+@productId2 = 22222222-2222-2222-2222-222222222222
+@productId3 = 33333333-3333-3333-3333-333333333333
+
+### Use the fake customer ID from the Identity service
+@customerId = cust-001
+
+### ───────────────────────────────────────────────
+### 1. Product Operations
+### ───────────────────────────────────────────────
+
+### 1.1 — Get all products (via BFF)
+GET {{bff}}/api/products
+Accept: application/json
+
+### 1.2 — Get all products (direct to Products service)
+GET {{products}}/api/products
+Accept: application/json
+
+### 1.3 — Get a product by ID (via BFF)
+GET {{bff}}/api/products/{{productId1}}
+Accept: application/json
+
+### 1.4 — Create a new product (via BFF)
+POST {{bff}}/api/products
+Content-Type: application/json
+
+{
+  "name": "Webcam HD",
+  "price": 59.99,
+  "category": "Electronics"
+}
+
+### 1.5 — Update a product (via BFF)
+### Replace {{productId1}} with the ID you want to update
+PUT {{bff}}/api/products/{{productId1}}
+Content-Type: application/json
+
+{
+  "id": "{{productId1}}",
+  "name": "Wireless Mouse Pro",
+  "price": 34.99,
+  "category": "Electronics"
+}
+
+### 1.6 — Delete a product (via BFF)
+### Replace {{productId3}} with the ID you want to delete
+DELETE {{bff}}/api/products/{{productId3}}
+
+### ───────────────────────────────────────────────
+### 2. Basket Operations
+### ───────────────────────────────────────────────
+
+### 2.1 — Get a customer's basket (via BFF)
+GET {{bff}}/api/baskets/{{customerId}}
+Accept: application/json
+
+### 2.2 — Add an item to the basket (via BFF)
+POST {{bff}}/api/baskets/{{customerId}}/items
+Content-Type: application/json
+
+{
+  "productId": "{{productId1}}",
+  "productName": "Wireless Mouse",
+  "unitPrice": 29.99,
+  "quantity": 2
+}
+
+### 2.3 — Add a second item to the basket (via BFF)
+POST {{bff}}/api/baskets/{{customerId}}/items
+Content-Type: application/json
+
+{
+  "productId": "{{productId2}}",
+  "productName": "Mechanical Keyboard",
+  "unitPrice": 89.99,
+  "quantity": 1
+}
+
+### 2.4 — Remove an item from the basket (via BFF)
+### Replace {{productId2}} with the product ID to remove
+DELETE {{bff}}/api/baskets/{{customerId}}/items/{{productId2}}
+Accept: application/json
+
+### ───────────────────────────────────────────────
+### 3. Checkout (Saga Orchestration)
+### ───────────────────────────────────────────────
+
+### 3.1 — Checkout the basket via the BFF saga orchestrator
+### This executes: Step 1 (basket checkout) → Step 2 (order creation) → Step 3 (complete)
+### On success, returns the saga ID and the created order.
+POST {{bff}}/api/baskets/{{customerId}}/checkout
+Accept: application/json
+
+### 3.2 — Inspect saga state by ID
+### Replace {{sagaId}} with the SagaId returned from the checkout response above
+@sagaId = 00000000-0000-0000-0000-000000000000
+GET {{bff}}/api/sagas/{{sagaId}}
+Accept: application/json
+
+### ───────────────────────────────────────────────
+### 4. Orders
+### ───────────────────────────────────────────────
+
+### 4.1 — Submit an order directly to the Orders service
+POST {{orders}}/api/orders
+Content-Type: application/json
+
+{
+  "customerId": "{{customerId}}",
+  "items": [
+    {
+      "productId": "{{productId1}}",
+      "productName": "Wireless Mouse",
+      "unitPrice": 29.99,
+      "quantity": 2
+    },
+    {
+      "productId": "{{productId2}}",
+      "productName": "Mechanical Keyboard",
+      "unitPrice": 89.99,
+      "quantity": 1
+    }
+  ]
+}
+
+### 4.2 — Get an order by ID (via BFF)
+### Replace {{orderId}} with the order ID from the checkout or submit response
+@orderId = 00000000-0000-0000-0000-000000000000
+GET {{bff}}/api/orders/{{orderId}}
+Accept: application/json
+
+### 4.3 — Get all orders for a customer (via BFF)
+GET {{bff}}/api/orders?customerId={{customerId}}
+Accept: application/json
+
+### 4.4 — Cancel an order (saga compensating action, direct to Orders service)
+### Replace {{orderId}} with the order ID to cancel
+DELETE {{orders}}/api/orders/{{orderId}}/cancel
+Accept: application/json
+
+### ───────────────────────────────────────────────
+### 5. Event-Driven Behavior
+### ───────────────────────────────────────────────
+
+### 5.1 — Trigger a ProductChanged event by updating a product
+### The Baskets service consumes ProductChanged and updates basket item names/prices.
+### The Notifications service also consumes ProductChanged and stores it.
+PUT {{bff}}/api/products/{{productId1}}
+Content-Type: application/json
+
+{
+  "id": "{{productId1}}",
+  "name": "Wireless Mouse Pro Max",
+  "price": 39.99,
+  "category": "Electronics"
+}
+
+### 5.2 — Check notifications for received events
+### After triggering product changes, basket checkouts, or order submissions,
+### check here to see the events that the Notifications service consumed from RabbitMQ.
+GET {{notifications}}/api/notifications
+Accept: application/json
+
+### 5.3 — Trigger a ProductChanged event by creating a product
+POST {{bff}}/api/products
+Content-Type: application/json
+
+{
+  "name": "Gaming Headset",
+  "price": 79.99,
+  "category": "Electronics"
+}
+
+### 5.4 — Check notifications again to see the new ProductChanged event
+GET {{notifications}}/api/notifications
+Accept: application/json
+
+### ───────────────────────────────────────────────
+### 6. Saga Failure & Compensation
+### ───────────────────────────────────────────────
+
+### To test saga compensation:
+###
+### 1. Add items to the basket:
+###      → Send request 2.2 (Add item to basket)
+###
+### 2. Stop the Orders container to simulate a failure:
+###      docker compose stop orders
+###
+### 3. Trigger checkout — the saga will:
+###      Step 1: Basket checkout succeeds (basket cleared, snapshot captured)
+###      Step 2: Order creation fails (Orders is down)
+###      Compensation: Basket items restored from snapshot
+###      Result: 502 Bad Gateway with "Checkout saga failed" message
+###
+POST {{bff}}/api/baskets/{{customerId}}/checkout
+Accept: application/json
+
+### 4. Verify the basket was restored:
+GET {{bff}}/api/baskets/{{customerId}}
+Accept: application/json
+
+### 5. Restart the Orders container:
+###      docker compose start orders
+###
+### 6. (Optional) Inspect the failed saga state:
+###      Replace {{sagaId}} with the SagaId from the failed checkout response
+GET {{bff}}/api/sagas/{{sagaId}}
+Accept: application/json
+
+### ───────────────────────────────────────────────
+### 7. Identity
+### ───────────────────────────────────────────────
+
+### 7.1 — Get the fake customer (via BFF)
+GET {{bff}}/api/identity/customer
+Accept: application/json
+
+### 7.2 — Get the fake customer (direct to Identity service)
+GET {{identity}}/api/customer
+Accept: application/json
+
+### ───────────────────────────────────────────────
+### 8. Full Demo Sequence
+### ───────────────────────────────────────────────
+
+### Run these requests in order for a complete demo walkthrough:
+###
+### Step 1: Browse products
+###      → Send request 1.1 (Get all products)
+###
+### Step 2: Get the fake customer
+###      → Send request 7.1 (Get customer)
+###
+### Step 3: Add items to basket
+###      → Send request 2.2 (Add Wireless Mouse)
+###      → Send request 2.3 (Add Mechanical Keyboard)
+###
+### Step 4: View the basket
+###      → Send request 2.1 (Get basket)
+###
+### Step 5: Checkout (saga orchestration)
+###      → Send request 3.1 (Checkout)
+###      → Note the SagaId and OrderId in the response
+###
+### Step 6: Verify the order was created
+###      → Send request 4.2 (Get order by ID) with the OrderId from Step 5
+###
+### Step 7: Verify the basket is now empty
+###      → Send request 2.1 (Get basket)
+###
+### Step 8: Check notifications for received events
+###      → Send request 5.2 (Get notifications)
+###      → You should see BasketCheckedOut and OrderSubmitted events
+###
+### Step 9: Trigger a product change
+###      → Send request 5.1 (Update product)
+###      → Send request 5.2 (Get notifications) to see the ProductChanged event
+###
+### Step 10: View the distributed trace
+###      → Open http://localhost:16686 (Jaeger UI)
+###      → Search for traces from the "bff" service
+###      → Expand a trace to see spans across BFF → Baskets → Orders → RabbitMQ → Notifications
