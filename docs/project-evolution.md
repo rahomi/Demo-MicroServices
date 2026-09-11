@@ -40,7 +40,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 | 5 | Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted | ✅ Done | [[05-orders-service]] |
 | 6 | Notifications service: RabbitMQ consumer + received events endpoint | ✅ Done | [[06-notifications-service]] |
 | 7 | BFF: Refit clients + routing map + checkout orchestration | ✅ Done | [[07-bff-service]] |
-| 8 | Saga pattern: orchestration-based checkout with compensating transactions | ⬜ Open | — |
+| 8 | Saga pattern: orchestration-based checkout with compensating transactions | ✅ Done | [[08-saga-orchestration]] |
 | 9 | Distributed tracing: OpenTelemetry + Jaeger | ⬜ Open | — |
 | 10 | Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger | ⬜ Open | — |
 | 11 | HTTP examples + README documentation | ⬜ Open | — |
@@ -57,6 +57,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 6. [[05-orders-service]] — Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted + Swagger UI (Ticket 5)
 7. [[06-notifications-service]] — Notifications service: RabbitMQ consumer + received events endpoint + Swagger UI (Ticket 6)
 8. [[07-bff-service]] — BFF: Refit clients + routing map + checkout orchestration + error handling + Swagger UI (Ticket 7)
+9. [[08-saga-orchestration]] — Saga pattern: orchestration-based checkout with compensating transactions (Ticket 8)
 
 ## 🏷️ Tag Legend
 
