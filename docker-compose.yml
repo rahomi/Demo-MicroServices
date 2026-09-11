@@ -1,0 +1,141 @@
+services:
+
+  # ==================== Infrastructure ====================
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    container_name: jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+
+  # ==================== Services ====================
+
+  bff:
+    build:
+      context: EcommerceDemo
+      dockerfile: BFF/Dockerfile
+    container_name: bff
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:5000
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: guest
+      RabbitMq__Password: guest
+      OTEL_SERVICE_NAME: bff
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      Downstream__ProductsUrl: http://products:5001
+      Downstream__BasketsUrl: http://baskets:5002
+      Downstream__OrdersUrl: http://orders:5003
+      Downstream__IdentityUrl: http://identity:5005
+    ports:
+      - "5000:5000"
+
+  products:
+    build:
+      context: EcommerceDemo
+      dockerfile: Products/Dockerfile
+    container_name: products
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:5001
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: guest
+      RabbitMq__Password: guest
+      OTEL_SERVICE_NAME: products
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "5001:5001"
+
+  baskets:
+    build:
+      context: EcommerceDemo
+      dockerfile: Baskets/Dockerfile
+    container_name: baskets
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:5002
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: guest
+      RabbitMq__Password: guest
+      OTEL_SERVICE_NAME: baskets
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "5002:5002"
+
+  orders:
+    build:
+      context: EcommerceDemo
+      dockerfile: Orders/Dockerfile
+    container_name: orders
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:5003
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: guest
+      RabbitMq__Password: guest
+      OTEL_SERVICE_NAME: orders
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "5003:5003"
+
+  notifications:
+    build:
+      context: EcommerceDemo
+      dockerfile: Notifications/Dockerfile
+    container_name: notifications
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_URLS: http://+:5004
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: guest
+      RabbitMq__Password: guest
+      OTEL_SERVICE_NAME: notifications
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "5004:5004"
+
+  identity:
+    build:
+      context: EcommerceDemo
+      dockerfile: Identity/Dockerfile
+    container_name: identity
+    environment:
+      ASPNETCORE_URLS: http://+:5005
+      OTEL_SERVICE_NAME: identity
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "5005:5005"
