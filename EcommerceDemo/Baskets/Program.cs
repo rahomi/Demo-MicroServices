@@ -11,6 +11,9 @@ using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- OpenTelemetry distributed tracing ---
+builder.Services.AddOpenTelemetryTracing(builder.Configuration);
+
 // --- EF Core InMemory ---
 builder.Services.AddDbContext<BasketDbContext>(options =>
     options.UseInMemoryDatabase("BasketsDb"));

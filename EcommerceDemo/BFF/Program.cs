@@ -1,11 +1,15 @@
 using System.Net;
 using BFF.Clients;
 using BFF.Saga;
+using Contracts.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Refit;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// --- OpenTelemetry distributed tracing ---
+builder.Services.AddOpenTelemetryTracing(builder.Configuration);
 
 // --- Refit clients (downstream service URLs configurable via environment/config) ---
 var productsUrl = builder.Configuration["Downstream:ProductsUrl"] ?? "http://localhost:5024";

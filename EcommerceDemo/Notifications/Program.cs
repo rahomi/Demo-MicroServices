@@ -5,6 +5,9 @@ using Notifications.Consumers;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- OpenTelemetry distributed tracing ---
+builder.Services.AddOpenTelemetryTracing(builder.Configuration);
+
 // --- RabbitMQ messaging ---
 builder.Services.AddRabbitMqMessaging(builder.Configuration);
 

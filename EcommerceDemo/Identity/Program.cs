@@ -1,6 +1,10 @@
+using Contracts.Messaging;
 using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// --- OpenTelemetry distributed tracing ---
+builder.Services.AddOpenTelemetryTracing(builder.Configuration);
 
 // --- OpenAPI / Swagger ---
 builder.Services.AddEndpointsApiExplorer();

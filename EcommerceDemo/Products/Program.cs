@@ -9,6 +9,9 @@ using Products.Features.Queries;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- OpenTelemetry distributed tracing ---
+builder.Services.AddOpenTelemetryTracing(builder.Configuration);
+
 // --- EF Core InMemory ---
 builder.Services.AddDbContext<ProductDbContext>(options =>
     options.UseInMemoryDatabase("ProductsDb"));
