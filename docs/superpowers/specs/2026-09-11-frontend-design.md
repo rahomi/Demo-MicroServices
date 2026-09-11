@@ -20,7 +20,7 @@ A React + Vite + TypeScript frontend for the EcommerceDemo microservices project
 | Vite | Build tool + dev server |
 | React Router v6 | Routing (`/shop/*`, `/admin/*`) |
 | TanStack Query (React Query) | Server state, caching, polling |
-| Zustand | Client state (basket badge) |
+| Zustand | Client state (UI toggles, modals) - *Optional, as React Query handles server state* |
 | shadcn/ui + Radix UI | Accessible component library |
 | Tailwind CSS | Styling (dark theme) |
 | nginx | Static file serving + API proxy (Docker) |
@@ -36,7 +36,7 @@ frontend/
 │   │   ├── api.ts              # Typed fetch wrapper, all API endpoints
 │   │   └── queryClient.ts      # TanStack Query client config
 │   ├── stores/
-│   │   └── basket-store.ts     # Zustand store for basket state
+│   │   └── ui-store.ts         # Zustand store for client-only UI state (if needed)
 │   ├── hooks/
 │   │   ├── use-products.ts      # useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct
 │   │   ├── use-basket.ts        # useBasket, useAddBasketItem, useRemoveBasketItem, useCheckout
@@ -142,8 +142,8 @@ interface NotificationEvent { type: string; data: any; receivedAt: string }
 - Grid of product cards showing name, price, category
 - Each card has a quantity selector (default 1) and "Add to basket" button
 - "Add to basket" calls `POST /api/baskets/cust-001/items` with product details
-- Toast notification on success/failure
-- Basket item count badge in navbar updates via Zustand
+- Toast notification on success/failure (handled globally via MutationCache)
+- Basket item count badge in navbar reads directly from `useBasket()` via TanStack Query cache
 
 #### `/shop/basket` — Shopping Basket
 - List of basket items: product name, unit price, quantity, line total
@@ -185,6 +185,8 @@ interface NotificationEvent { type: string; data: any; receivedAt: string }
 - Shows event type (BasketCheckedOut, OrderSubmitted, ProductChanged), timestamp
 - Color-coded by event type
 - Clear visual distinction between event types
+- **Client-side cap:** Display only the latest 50 events to avoid UI jank and memory buildup during long demo sessions. The `useNotifications` hook slices the response to the most recent 50 before returning.
+- **Deduplication:** The Notifications service returns a flat list on each poll. The hook deduplicates by event type + timestamp to prevent flicker on re-fetch. (Server-side `?since=TIMESTAMP` support is noted as a future improvement but out of scope for this demo.)
 
 ### Shared Layout
 - Top navbar with: logo, basket icon (with item count badge), nav links (Products, Basket, Orders | Admin)
@@ -198,7 +200,7 @@ interface NotificationEvent { type: string; data: any; receivedAt: string }
 ### Product → Basket → Checkout Flow
 1. `useProducts()` fetches `GET /api/products` via TanStack Query (cached, stale-while-revalidate)
 2. User clicks "Add to basket" → `useAddBasketItem()` mutation calls `POST /api/baskets/cust-001/items`, invalidates `basket` query on success
-3. Basket badge in navbar reads from Zustand (synced with basket query data)
+3. Basket badge in navbar calls `useBasket()` which returns cached data instantly without duplicate fetching
 4. Checkout → `useCheckout()` mutation calls `POST /api/baskets/cust-001/checkout`
 5. On success: navigate to `/shop/checkout` with saga ID + order, invalidate `orders` query
 6. On 502 failure: toast with compensation message, basket query refetches (items restored by saga compensation)
@@ -214,13 +216,32 @@ interface NotificationEvent { type: string; data: any; receivedAt: string }
 
 ## Error Handling
 
+### Global Error Handling (Centralized)
+
+Instead of try/catch in every component or hook, errors are handled globally via TanStack Query's `MutationCache` and `QueryCache` in `queryClient.ts`:
+
+```typescript
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => showToast({ title: "Request failed", description: error.message }),
+  }),
+  mutationCache: new MutationCache({
+    onError: (error) => showToast({ title: "Operation failed", description: error.message }),
+  }),
+});
+```
+
+This means individual hooks don't need per-mutation error handlers — toasts fire automatically. Components can still override with specific error handling (e.g., saga 502 → compensation toast) by providing `onError` in the mutation options.
+
+### Error Scenarios
+
 | Scenario | HTTP Status | Behavior |
 |----------|-------------|----------|
-| Service down | 503 | Toast: "Service is unreachable", show retry button |
-| Saga failure | 502 | Toast with compensation message, basket auto-refetches to show restored items |
+| Service down | 503 | Global toast: "Service is unreachable", show retry button |
+| Saga failure | 502 | Override: compensation toast, basket auto-refetches to show restored items |
 | Network error | — | TanStack Query retry (1 attempt), then error state with retry button |
 | Not found | 404 | "Not found" state in the relevant component |
-| Mutation error | 4xx/5xx | Toast with error detail from response body |
+| Mutation error | 4xx/5xx | Global toast with error detail from response body |
 
 ---
 
@@ -243,8 +264,9 @@ frontend:
 ### nginx.conf
 
 - Serves static React build from `/usr/share/nginx/html`
-- `location /api/notifications` → `proxy_pass http://notifications:5004` (more specific, takes precedence)
-- `location /api/` → `proxy_pass http://bff:5000`
+- Uses Docker's internal DNS (`resolver 127.0.0.11 valid=10s;`) to prevent Nginx from crashing if backend containers are recreated.
+- `location /api/notifications/` → `proxy_pass http://$notifications_host:5004`
+- `location /api/` → `proxy_pass http://$bff_host:5000`
 - SPA fallback: `try_files $uri $uri/ /index.html`
 
 ### Dev proxy (vite.config.ts)
