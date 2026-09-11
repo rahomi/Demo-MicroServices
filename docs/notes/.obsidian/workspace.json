@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "09-saga-pattern-with-compensation.md",
+                "file": "10-distributed-tracing-with-opentelemetry.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "09-saga-pattern-with-compensation"
+              "title": "10-distributed-tracing-with-opentelemetry"
             }
           }
         ]
@@ -168,6 +168,8 @@
   },
   "active": "d7e3b807fc8dd824",
   "lastOpenFiles": [
+    "09-saga-pattern-with-compensation.md",
+    "08-backend-for-frontend-pattern.md",
     "03-cqrs-with-mediatr.md",
     "12-api-documentation.md",
     "07-event-driven-consumer-pattern.md",
@@ -177,8 +179,6 @@
     "api-documentation.md",
     "11-docker-compose-and-containerization.md",
     "10-distributed-tracing-with-opentelemetry.md",
-    "09-saga-pattern-with-compensation.md",
-    "08-backend-for-frontend-pattern.md",
     "06-order-submission-and-events.md",
     "05-minimal-service-boundary.md",
     "rabbitmq-messaging-topology.md",

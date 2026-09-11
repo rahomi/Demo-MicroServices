@@ -73,9 +73,6 @@ sequenceDiagram
 
 #### Drawbacks
 
-> [!danger]
-> 2PC is rarely used in microservices because of three critical problems:
-
 | Drawback | Explanation |
 |----------|-------------|
 | **Blocking** | Participants lock resources during the prepare phase. If the coordinator crashes, participants hold locks indefinitely — blocking the entire system. |

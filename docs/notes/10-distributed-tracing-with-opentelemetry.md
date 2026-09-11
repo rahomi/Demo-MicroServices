@@ -4,12 +4,17 @@
 > [!abstract]
 > **Core Idea**
 >
-> In a microservices system, a single user request spans multiple services and crosses an async messaging boundary (RabbitMQ). **Distributed tracing** with OpenTelemetry + Jaeger lets you see the entire request as a single trace tree — HTTP calls, RabbitMQ publishes, and consumer processing all linked by the W3C `traceparent` header.
+> In a microservices system, a single user request spans multiple services and crosses an async messaging boundary (RabbitMQ). **Distributed tracing** tracks the end-to-end journey of that request as a **trace** — a tree of **spans** linked by a shared **Trace ID**. **OpenTelemetry** is the vendor-neutral framework for instrumenting applications, and **Jaeger** is the open-source tool used to visualize the traces. This note covers the core concepts (traces, spans, correlation context), the tooling landscape (OpenTelemetry, Jaeger, Zipkin, APM platforms), best practices (avoiding vendor lock-in, logs vs traces), and a concrete implementation using OpenTelemetry + Jaeger with W3C `traceparent` propagation across HTTP and RabbitMQ.
 
 ---
 
 ## 🎯 Learning Objectives
 
+- Understand **traces and spans** — the fundamental building blocks of distributed tracing
+- Understand **correlation context** — how a Trace ID propagates across services to stitch spans into a coherent flow
+- Understand **OpenTelemetry** as a vendor-neutral instrumentation framework
+- Know the **tooling landscape** — Jaeger, Zipkin for visualization; New Relic, Splunk for APM; Micrometer for metrics
+- Apply **best practices** — avoiding vendor lock-in, understanding logs vs traces
 - Register **OpenTelemetry SDK** in all services with a shared extension method
 - Understand how **W3C traceparent** propagates across HTTP and RabbitMQ boundaries
 - Export traces to **Jaeger** via OTLP
@@ -19,23 +24,141 @@
 
 ## 🧩 Main Concepts
 
-### 1. Distributed Tracing Fundamentals
+### 1. Traces and Spans: The Building Blocks
 
 #### Definition
 
-**Distributed tracing** tracks a single user request as it flows through multiple services. Each service contributes a **span** (a unit of work), and spans are linked into a **trace tree** by a shared trace ID.
+A **trace** represents the end-to-end journey of a single request through a distributed system. It is composed of multiple **spans**, where each span captures a specific operation or task within a service — an HTTP request, a database query, a message publish, or a message consume.
+
+```
+Trace (checkout request)
+├── Span: BFF — POST /api/baskets/{id}/checkout
+│   ├── Span: Baskets — POST /api/baskets/{id}/checkout
+│   │   └── Span: RabbitMQ — publish BasketCheckedOut
+│   └── Span: Orders — POST /api/orders
+│       └── Span: RabbitMQ — publish OrderSubmitted
+├── Span: Notifications — consume BasketCheckedOut (linked)
+└── Span: Notifications — consume OrderSubmitted (linked)
+```
 
 #### Why It Exists
 
-Without tracing, debugging a slow checkout means checking logs in BFF, Baskets, Orders, and Notifications separately — with no way to correlate them. Tracing links all the logs into one visual tree.
+In a monolith, a single stack trace shows the full call chain. In microservices, the call chain is split across processes — there's no single stack trace. Traces reconstruct that call chain by linking spans across service boundaries.
 
 #### Problem It Solves
 
-The "where did it go wrong?" problem. With tracing, you open Jaeger, find the checkout trace, and immediately see which service is slow or failing.
+The "where did it go wrong?" problem. Without tracing, debugging a slow checkout means checking logs in BFF, Baskets, Orders, and Notifications separately — with no way to correlate them. With tracing, you open Jaeger, find the checkout trace, and immediately see which service is slow or failing.
+
+> [!info]
+> Each span has a **start time, duration, operation name, and tags** (key-value metadata like HTTP status code, routing key, etc.). The collection of spans forms a tree — each span has a parent span (except the root).
 
 ---
 
-### 2. Trace Propagation Across Boundaries
+### 2. Correlation Context: How Spans Link Together
+
+#### Definition
+
+A unique **Trace ID** (also called a correlation identifier) is propagated across services. This allows the system to stitch together parent and child spans into a coherent flow — even across async boundaries like message queues.
+
+#### How It Works
+
+The W3C **traceparent** header carries three pieces of information:
+- **Trace ID** — shared by all spans in the same trace
+- **Span ID** — unique per span, identifies the parent of the next span
+- **Sampling flag** — whether this trace should be recorded
+
+```mermaid
+flowchart LR
+    BFF["BFF\nTraceID: abc123\nSpanID: 001"] -->|"traceparent: 00-abc123-001-01"| Baskets["Baskets\nTraceID: abc123\nSpanID: 002"]
+    Baskets -->|"traceparent in msg headers"| RabbitMQ["RabbitMQ\n(traceparent stored)"]
+    RabbitMQ -->|"traceparent extracted"| Notif["Notifications\nTraceID: abc123\nSpanID: 003"]
+```
+
+> [!tip]
+> The Trace ID is the **correlation key**. Every service in the request chain shares the same Trace ID. When you search Jaeger by Trace ID, you see the entire request flow — HTTP calls, RabbitMQ messages, and consumer processing — as one tree.
+
+---
+
+### 3. OpenTelemetry: The Vendor-Neutral Framework
+
+#### Definition
+
+**OpenTelemetry** is a vendor-neutral framework for instrumenting applications to collect and export telemetry data (traces, metrics, logs) consistently. It's a CNCF project that merged OpenTracing and OpenCensus.
+
+#### Why It Exists
+
+Before OpenTelemetry, each monitoring vendor (New Relic, Datadog, Splunk) had its own instrumentation library. If you switched vendors, you had to re-instrument your entire codebase. OpenTelemetry provides a single, standard API — you instrument once, and export to any backend.
+
+#### Problem It Solves
+
+**Vendor lock-in**. With OpenTelemetry, you write instrumentation code once. To switch from Jaeger to Zipkin to New Relic, you only change the exporter configuration — not the instrumentation code.
+
+```mermaid
+flowchart TD
+    App["Your Application\n(OpenTelemetry SDK)"] -->|"OTLP export"| Collector["OpenTelemetry Collector\n(optional)"]
+    Collector --> Jaeger["Jaeger"]
+    Collector --> Zipkin["Zipkin"]
+    Collector --> NewRelic["New Relic"]
+    Collector --> Splunk["Splunk"]
+```
+
+> [!info]
+> OpenTelemetry is **not a monitoring backend** — it's the instrumentation layer. The backend (Jaeger, Zipkin, New Relic, etc.) is separate. You can change backends without touching application code.
+
+---
+
+### 4. The Tooling Landscape
+
+#### Visualization Tools (Open Source)
+
+| Tool | Type | What It Shows |
+|------|------|---------------|
+| **Jaeger** | Distributed tracing UI | Trace trees, span timing, service dependency maps |
+| **Zipkin** | Distributed tracing UI | Similar to Jaeger — alternative open-source option |
+
+#### APM and Metrics Platforms (Commercial)
+
+| Tool | Type | What It Offers |
+|------|------|----------------|
+| **New Relic** | APM (Application Performance Monitoring) | End-to-end monitoring, alerts, dashboards |
+| **Splunk** | APM + Log management | Comprehensive monitoring, log aggregation, metrics |
+| **Micrometer** | Metrics library | Application metrics (JVM, HTTP, custom) — not traces |
+
+> [!tip]
+> This project uses **Jaeger** (`jaegertracing/all-in-one:1.62`) because it's free, open-source, and has a great UI for visualizing trace trees. In production, you'd use a managed APM platform (New Relic, Datadog) for alerting and long-term storage.
+
+---
+
+### 5. Best Practices
+
+#### Avoiding Vendor Lock-In
+
+> [!warning]
+> If you instrument directly with a vendor's SDK (e.g., `NewRelic.Api.Agent`), switching to another platform means re-instrumenting your entire codebase. **OpenTelemetry avoids this** — you instrument once with the OpenTelemetry API, and switch backends by changing the exporter.
+
+| Approach | Vendor Lock-in | Flexibility |
+|----------|---------------|-------------|
+| Direct vendor SDK (e.g., New Relic) | ❌ High | Low — must re-instrument to switch |
+| OpenTelemetry + OTLP export | ✅ None | High — change exporter config only |
+
+#### Logs vs Traces
+
+> [!info]
+> **Logs** provide details about specific events within a single service (e.g., "Order created for customer X"). **Distributed traces** provide the necessary context for **inter-service interactions** — which service called which, how long each took, and where the failure occurred.
+
+| Aspect | Logs | Distributed Traces |
+|--------|------|-------------------|
+| Scope | Single service | Cross-service |
+| Correlation | Manual (search by timestamp/request ID) | Automatic (shared Trace ID) |
+| Best for | "What happened in this service?" | "Where did this request go wrong?" |
+| Overhead | Low | Medium (instrumentation + export) |
+
+> [!tip]
+> Use **both**. Logs for detailed debugging within a service, traces for understanding the cross-service flow. OpenTelemetry can correlate logs to traces by injecting the Trace ID into log entries.
+
+---
+
+### 6. Trace Propagation Across Boundaries
 
 #### How It Works
 
@@ -68,7 +191,7 @@ sequenceDiagram
 
 ---
 
-### 3. Shared OpenTelemetry Registration
+### 7. Shared OpenTelemetry Registration
 
 #### Definition
 
@@ -124,7 +247,7 @@ builder.Services.AddOpenTelemetryTracing(builder.Configuration);
 
 ---
 
-### 4. What Gets Instrumented
+### 8. What Gets Instrumented
 
 | Instrumentation | What It Traces | Package |
 |-----------------|----------------|--------|
