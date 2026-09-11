@@ -125,6 +125,23 @@ app.MapPost("/api/baskets/{customerId}/checkout", async (string customerId, IMed
 .Produces<BasketCheckedOut>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status404NotFound);
 
+/// <summary>
+/// Restore basket items from a snapshot (saga compensating action).
+/// </summary>
+/// <param name="customerId">The customer ID.</param>
+/// <param name="items">The items to restore.</param>
+/// <returns>The restored basket.</returns>
+/// <response code="200">Items restored successfully.</response>
+app.MapPost("/api/baskets/{customerId}/restore", async (string customerId, List<RestoreBasketItemRequest> items, IMediator mediator, CancellationToken ct) =>
+{
+    var basket = await mediator.Send(new RestoreBasketCommand(customerId, items), ct);
+    return Results.Ok(basket);
+})
+.WithName("RestoreBasket")
+.WithSummary("Restore basket items (saga compensation)")
+.WithDescription("Re-adds items to the basket from a snapshot. Used by the BFF saga orchestrator as a compensating action when order creation fails after basket checkout.")
+.Produces<Basket>(StatusCodes.Status200OK);
+
 app.Run();
 
 /// <summary>

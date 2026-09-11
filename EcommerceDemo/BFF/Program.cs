@@ -1,5 +1,7 @@
 using System.Net;
 using BFF.Clients;
+using BFF.Saga;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Refit;
 
@@ -19,6 +21,13 @@ builder.Services.AddRefitClient<IOrdersClient>()
     .ConfigureHttpClient(c => c.BaseAddress = new Uri(ordersUrl));
 builder.Services.AddRefitClient<IIdentityClient>()
     .ConfigureHttpClient(c => c.BaseAddress = new Uri(identityUrl));
+
+// --- Saga state persistence (EF Core InMemory) ---
+builder.Services.AddDbContext<SagaDbContext>(options =>
+    options.UseInMemoryDatabase("SagaDb"));
+
+// --- Saga orchestrator ---
+builder.Services.AddScoped<CheckoutSagaOrchestrator>();
 
 // --- OpenAPI / Swagger ---
 builder.Services.AddEndpointsApiExplorer();
@@ -253,59 +262,48 @@ app.MapGet("/api/orders", async (string customerId, IOrdersClient client) =>
 .WithDescription("Proxies to the Orders service.")
 .Produces<List<OrderDto>>(StatusCodes.Status200OK);
 
-// ==================== Checkout orchestration ====================
-// Synchronous checkout: calls Baskets to checkout, then calls Orders to create an order from the basket items.
+// ==================== Checkout saga orchestration ====================
+// Orchestration-based saga: Step 1 reserves basket, Step 2 creates order, Step 3 completes.
+// On failure, compensating actions run in reverse: cancel order (if created), restore basket items.
 
-app.MapPost("/api/baskets/{customerId}/checkout", async (string customerId, IBasketsClient basketsClient, IOrdersClient ordersClient) =>
+app.MapPost("/api/baskets/{customerId}/checkout", async (string customerId, CheckoutSagaOrchestrator saga, CancellationToken ct) =>
 {
-    // Step 1: Checkout the basket (clears basket, returns the items that were in it)
-    CheckoutResult checkout;
-    try
-    {
-        checkout = await basketsClient.CheckoutAsync(customerId);
-    }
-    catch (Exception ex)
-    {
-        logger.LogWarning(ex, "Checkout failed at Baskets service for customer {CustomerId}.", customerId);
-        return HandleDownstreamError(ex, "Baskets service", logger);
-    }
+    var result = await saga.ExecuteAsync(customerId, ct);
 
-    if (checkout.Items.Count == 0)
+    return result.FinalState switch
     {
-        return Results.BadRequest("Basket is empty — nothing to checkout.");
-    }
-
-    // Step 2: Create an order from the checked-out basket items
-    var orderRequest = new SubmitOrderRequest(
-        checkout.CustomerId,
-        checkout.Items.Select(i => new SubmitOrderItem(i.ProductId, i.ProductName, i.UnitPrice, i.Quantity)).ToList()
-    );
-
-    OrderDto order;
-    try
-    {
-        order = await ordersClient.SubmitOrderAsync(orderRequest);
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Checkout succeeded but order creation failed for customer {CustomerId}.", customerId);
-        return Results.Problem(
-            title: "Order creation failed after basket checkout",
+        SagaStatus.Completed => Results.Ok(new
+        {
+            SagaId = result.SagaId,
+            State = result.FinalState.ToString(),
+            Order = result.Order,
+            Message = "Checkout saga completed successfully."
+        }),
+        SagaStatus.Failed => Results.Problem(
+            title: "Checkout saga failed — compensating actions executed",
             statusCode: StatusCodes.Status502BadGateway,
-            detail: "Basket was checked out but order could not be created. Manual compensation may be needed.");
-    }
-
-    logger.LogInformation("Checkout orchestrated for customer {CustomerId}: basket cleared, order {OrderId} created.", customerId, order.Id);
-
-    return Results.Ok(new
-    {
-        Order = order,
-        CheckedOutItems = checkout.Items,
-        checkout.CheckedOutAt
-    });
+            detail: result.ErrorMessage ?? "Saga failed and compensation was applied."),
+        _ => Results.Problem(
+            title: "Checkout saga ended in unexpected state",
+            statusCode: StatusCodes.Status500InternalServerError,
+            detail: $"Saga ended in state: {result.FinalState}")
+    };
 })
 .WithName("Checkout")
-.WithSummary("Checkout basket and create order")
-.WithDescription("Orchestrates checkout: calls Baskets to clear the basket, then calls Orders to create an order from the basket items. Returns the created order and checked-out items.");
+.WithSummary("Checkout basket via saga orchestration")
+.WithDescription("Executes an orchestration-based saga: Step 1 checks out the basket (captures snapshot), Step 2 creates an order, Step 3 completes. On failure, compensating actions restore the basket and cancel the order. Saga state is persisted and queryable via GET /api/sagas/{id}.");
+
+// ==================== Saga inspection ====================
+
+app.MapGet("/api/sagas/{id:guid}", async (Guid id, CheckoutSagaOrchestrator saga, CancellationToken ct) =>
+{
+    var sagaState = await saga.GetSagaAsync(id, ct);
+    return sagaState is not null ? Results.Ok(sagaState) : Results.NotFound();
+})
+.WithName("GetSagaById")
+.WithSummary("Get saga state by ID")
+.WithDescription("Returns the persisted state of a checkout saga, including current state, basket snapshot, order ID, and error message. Useful for demo visibility of saga state transitions.")
+.Produces<SagaState>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound);
 
 app.Run();

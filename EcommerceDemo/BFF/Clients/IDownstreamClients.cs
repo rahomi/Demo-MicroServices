@@ -37,6 +37,9 @@ public interface IBasketsClient
 
     [Post("/api/baskets/{customerId}/checkout")]
     Task<CheckoutResult> CheckoutAsync(string customerId);
+
+    [Post("/api/baskets/{customerId}/restore")]
+    Task<BasketDto> RestoreBasketAsync(string customerId, [Body] List<RestoreBasketItemRequest> items);
 }
 
 // --- Orders service client ---
@@ -51,6 +54,9 @@ public interface IOrdersClient
 
     [Get("/api/orders")]
     Task<List<OrderDto>> GetOrdersByCustomerAsync([AliasAs("customerId")] string customerId);
+
+    [Delete("/api/orders/{id}/cancel")]
+    Task<OrderDto> CancelOrderAsync(Guid id);
 }
 
 // --- Identity service client ---
@@ -73,6 +79,8 @@ public record AddBasketItemRequest(Guid ProductId, string ProductName, decimal U
 
 public record CheckoutResult(string CustomerId, List<CheckoutItemDto> Items, DateTime CheckedOutAt);
 public record CheckoutItemDto(Guid ProductId, string ProductName, decimal UnitPrice, int Quantity);
+
+public record RestoreBasketItemRequest(Guid ProductId, string ProductName, decimal UnitPrice, int Quantity);
 
 public record OrderDto(Guid Id, string CustomerId, List<OrderItemDto> Items, decimal Total, string Status, DateTime CreatedAt);
 public record OrderItemDto(Guid Id, Guid OrderId, Guid ProductId, string ProductName, decimal UnitPrice, int Quantity);

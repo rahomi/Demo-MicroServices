@@ -76,4 +76,22 @@ app.MapGet("/api/orders", async (string customerId, IMediator mediator, Cancella
 .WithDescription("Returns all orders for a given customer, most recent first.")
 .Produces<List<Order>>(StatusCodes.Status200OK);
 
+/// <summary>
+/// Cancel an order (saga compensating action).
+/// </summary>
+/// <param name="id">The order ID.</param>
+/// <returns>The cancelled order.</returns>
+/// <response code="200">Order cancelled successfully.</response>
+/// <response code="404">Order not found.</response>
+app.MapDelete("/api/orders/{id:guid}/cancel", async (Guid id, IMediator mediator, CancellationToken ct) =>
+{
+    var order = await mediator.Send(new CancelOrderCommand(id), ct);
+    return order is not null ? Results.Ok(order) : Results.NotFound();
+})
+.WithName("CancelOrder")
+.WithSummary("Cancel an order (saga compensation)")
+.WithDescription("Sets the order status to 'Cancelled'. Used by the BFF saga orchestrator as a compensating action when a checkout step fails after order creation.")
+.Produces<Order>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound);
+
 app.Run();
