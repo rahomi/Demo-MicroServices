@@ -1,6 +1,3 @@
----
-title: "API documentation: .http files + comprehensive README"
----
 
 # 📖 API Documentation: .http Files + Comprehensive README
 

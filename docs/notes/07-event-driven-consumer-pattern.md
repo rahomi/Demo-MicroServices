@@ -1,6 +1,3 @@
----
-title: "Event-driven consumer pattern: consuming OrderSubmitted + ProductChanged"
----
 
 # 🔔 Notifications Service: Event-Driven Consumer Pattern
 

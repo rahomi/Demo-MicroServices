@@ -1,6 +1,3 @@
----
-title: "Saga pattern: orchestration-based checkout with compensating transactions"
----
 
 # 🔄 Saga Pattern: Orchestration-Based Checkout with Compensating Transactions
 

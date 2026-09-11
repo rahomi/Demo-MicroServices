@@ -1,6 +1,3 @@
----
-title: "Solution scaffolding and shared Contracts infrastructure"
----
 
 # 🏗️ Solution Scaffolding & Shared Contracts Infrastructure
 

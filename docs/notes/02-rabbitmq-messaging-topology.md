@@ -1,6 +1,3 @@
----
-title: "RabbitMQ messaging topology design"
----
 
 # 📡 RabbitMQ Messaging Topology Design
 

@@ -1,6 +1,3 @@
----
-title: "CQRS with MediatR + EF Core InMemory + CRUD + Integration Events + Swagger"
----
 
 # 📦 Products Service: CQRS with MediatR + EF Core + Integration Events
 

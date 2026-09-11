@@ -1,6 +1,3 @@
----
-title: "Order submission with MediatR CQRS + server-side total + OrderSubmitted event"
----
 
 # 📋 Orders Service: CQRS + Server-Side Calculation + OrderSubmitted Event
 

@@ -1,6 +1,3 @@
----
-title: "Basket operations + Event Consumer + EF Core change tracking"
----
 
 # 🛒 Baskets Service: Basket Ops + Event Consumer + EF Core Gotchas
 

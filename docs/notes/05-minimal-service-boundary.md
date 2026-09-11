@@ -1,6 +1,3 @@
----
-title: "Minimal service boundary: fake identity endpoint"
----
 
 # 🔑 Identity Service: Minimal Service Boundary
 

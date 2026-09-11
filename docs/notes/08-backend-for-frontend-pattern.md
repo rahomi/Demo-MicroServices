@@ -1,6 +1,3 @@
----
-title: "Backend for Frontend: Refit clients + routing map + checkout orchestration"
----
 
 # 🌐 BFF Service: Backend for Frontend Pattern
 

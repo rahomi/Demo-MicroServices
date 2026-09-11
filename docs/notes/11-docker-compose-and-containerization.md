@@ -1,6 +1,3 @@
----
-title: "Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger"
----
 
 # 🐳 Docker Compose: Containerization + Service Discovery + Healthchecks
 

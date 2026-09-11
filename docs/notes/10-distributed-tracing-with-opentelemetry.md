@@ -1,6 +1,3 @@
----
-title: "Distributed tracing: OpenTelemetry + Jaeger"
----
 
 # 🔍 Distributed Tracing: OpenTelemetry + Jaeger
 
