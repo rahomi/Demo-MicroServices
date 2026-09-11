@@ -368,9 +368,9 @@ Build succeeded.
 
 ## 📎 See Also
 
-- [[rabbitmq-messaging-topology]] — RabbitMQ messaging topology design
-- [[cqrs-with-mediatr]] — First service using CQRS + MediatR
-- [[distributed-tracing-with-opentelemetry]] — OpenTelemetry SDK registration (uses the traceparent infrastructure built here)
+- [[02-rabbitmq-messaging-topology]] — RabbitMQ messaging topology design
+- [[03-cqrs-with-mediatr]] — First service using CQRS + MediatR
+- [[10-distributed-tracing-with-opentelemetry]] — OpenTelemetry SDK registration (uses the traceparent infrastructure built here)
 
 ---
 

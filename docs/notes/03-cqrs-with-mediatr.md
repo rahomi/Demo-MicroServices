@@ -258,10 +258,10 @@ app.UseSwaggerUI();
 
 ## 📎 See Also
 
-- [[solution-scaffolding-and-contracts]] — Contracts project with `IEventPublisher` used here
-- [[basket-operations-and-event-consumer]] — Consumes `ProductChanged` events from this service
-- [[backend-for-frontend-pattern]] — BFF proxies these endpoints
-- [[rabbitmq-messaging-topology]] — RabbitMQ topology design
+- [[01-solution-scaffolding-and-contracts]] — Contracts project with `IEventPublisher` used here
+- [[04-basket-operations-and-event-consumer]] — Consumes `ProductChanged` events from this service
+- [[08-backend-for-frontend-pattern]] — BFF proxies these endpoints
+- [[02-rabbitmq-messaging-topology]] — RabbitMQ topology design
 
 ---
 

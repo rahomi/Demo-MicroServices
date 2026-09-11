@@ -153,11 +153,11 @@ public abstract class EventConsumer<T> : BackgroundService
 
 ## 📎 See Also
 
-- [[solution-scaffolding-and-contracts]] — Implementation of the publisher, consumer, and connection
-- [[cqrs-with-mediatr]] — First service to publish events (`ProductChanged`)
-- [[basket-operations-and-event-consumer]] — First service to consume events (`ProductChangedConsumer`)
-- [[event-driven-consumer-pattern]] — Consumes both `OrderSubmitted` and `ProductChanged`
-- [[distributed-tracing-with-opentelemetry]] — OpenTelemetry SDK registration (uses the traceparent infrastructure)
+- [[01-solution-scaffolding-and-contracts]] — Implementation of the publisher, consumer, and connection
+- [[03-cqrs-with-mediatr]] — First service to publish events (`ProductChanged`)
+- [[04-basket-operations-and-event-consumer]] — First service to consume events (`ProductChangedConsumer`)
+- [[07-event-driven-consumer-pattern]] — Consumes both `OrderSubmitted` and `ProductChanged`
+- [[10-distributed-tracing-with-opentelemetry]] — OpenTelemetry SDK registration (uses the traceparent infrastructure)
 
 ---
 

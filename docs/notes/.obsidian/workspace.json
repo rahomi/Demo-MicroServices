@@ -164,8 +164,20 @@
   },
   "active": "d7e3b807fc8dd824",
   "lastOpenFiles": [
-    "rabbitmq-messaging-topology.md",
     "api-documentation.md",
+    "12-api-documentation.md",
+    "11-docker-compose-and-containerization.md",
+    "10-distributed-tracing-with-opentelemetry.md",
+    "09-saga-pattern-with-compensation.md",
+    "08-backend-for-frontend-pattern.md",
+    "07-event-driven-consumer-pattern.md",
+    "06-order-submission-and-events.md",
+    "05-minimal-service-boundary.md",
+    "04-basket-operations-and-event-consumer.md",
+    "03-cqrs-with-mediatr.md",
+    "02-rabbitmq-messaging-topology.md",
+    "01-solution-scaffolding-and-contracts.md",
+    "rabbitmq-messaging-topology.md",
     "docker-compose-and-containerization.md",
     "distributed-tracing-with-opentelemetry.md",
     "saga-pattern-with-compensation.md",
@@ -177,14 +189,6 @@
     "cqrs-with-mediatr.md",
     "solution-scaffolding-and-contracts.md",
     "retrospective.md",
-    "README.md",
-    "01-scaffold-solution.md",
-    "11-http-examples-and-readme.md",
-    "T03-rabbitmq-contracts-design.md",
-    "05-orders-service.md",
-    "04-identity-service.md",
-    "03-rabbitmq-contracts-design.md",
-    "03-baskets-service.md",
-    "02-products-service.md"
+    "README.md"
   ]
 }

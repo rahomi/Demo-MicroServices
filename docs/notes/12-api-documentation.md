@@ -167,15 +167,15 @@ Developer confirmed "yes" at the Step 5 gate
 
 ## 📎 See Also
 
-- [[cqrs-with-mediatr]] — Products endpoints documented
-- [[basket-operations-and-event-consumer]] — Baskets endpoints documented
-- [[minimal-service-boundary]] — Identity endpoint documented
-- [[order-submission-and-events]] — Orders endpoints documented
-- [[event-driven-consumer-pattern]] — Notifications endpoint documented
-- [[backend-for-frontend-pattern]] — BFF routing map documented
-- [[saga-pattern-with-compensation]] — Saga pattern documented in README
-- [[distributed-tracing-with-opentelemetry]] — Tracing documented in README
-- [[docker-compose-and-containerization]] — Docker Compose startup documented in README
+- [[03-cqrs-with-mediatr]] — Products endpoints documented
+- [[04-basket-operations-and-event-consumer]] — Baskets endpoints documented
+- [[05-minimal-service-boundary]] — Identity endpoint documented
+- [[06-order-submission-and-events]] — Orders endpoints documented
+- [[07-event-driven-consumer-pattern]] — Notifications endpoint documented
+- [[08-backend-for-frontend-pattern]] — BFF routing map documented
+- [[09-saga-pattern-with-compensation]] — Saga pattern documented in README
+- [[10-distributed-tracing-with-opentelemetry]] — Tracing documented in README
+- [[11-docker-compose-and-containerization]] — Docker Compose startup documented in README
 
 ---
 

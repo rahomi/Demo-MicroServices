@@ -197,11 +197,11 @@ GET  /api/orders?customerId={id}      — list by customer
 
 ## 📎 See Also
 
-- [[solution-scaffolding-and-contracts]] — Contracts with `OrderSubmitted` event DTO
-- [[basket-operations-and-event-consumer]] — Explicit FK pattern discovered here
-- [[event-driven-consumer-pattern]] — Consumes `OrderSubmitted` events
-- [[backend-for-frontend-pattern]] — BFF proxies order endpoints
-- [[saga-pattern-with-compensation]] — Saga uses order submit + cancel
+- [[01-solution-scaffolding-and-contracts]] — Contracts with `OrderSubmitted` event DTO
+- [[04-basket-operations-and-event-consumer]] — Explicit FK pattern discovered here
+- [[07-event-driven-consumer-pattern]] — Consumes `OrderSubmitted` events
+- [[08-backend-for-frontend-pattern]] — BFF proxies order endpoints
+- [[09-saga-pattern-with-compensation]] — Saga uses order submit + cancel
 
 ---
 

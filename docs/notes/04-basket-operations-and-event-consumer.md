@@ -277,10 +277,10 @@ POST   /api/baskets/{customerId}/checkout          — checkout (clears basket, 
 
 ## 📎 See Also
 
-- [[solution-scaffolding-and-contracts]] — `EventConsumer<T>` base class
-- [[cqrs-with-mediatr]] — Publishes `ProductChanged` events consumed here
-- [[backend-for-frontend-pattern]] — BFF proxies basket endpoints
-- [[saga-pattern-with-compensation]] — Saga uses basket checkout + restore endpoints
+- [[01-solution-scaffolding-and-contracts]] — `EventConsumer<T>` base class
+- [[03-cqrs-with-mediatr]] — Publishes `ProductChanged` events consumed here
+- [[08-backend-for-frontend-pattern]] — BFF proxies basket endpoints
+- [[09-saga-pattern-with-compensation]] — Saga uses basket checkout + restore endpoints
 
 ---
 

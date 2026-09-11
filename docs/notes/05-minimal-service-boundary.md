@@ -91,8 +91,8 @@ Same `AddSwaggerGen` / `UseSwagger` / `UseSwaggerUI` as all other services
 
 ## 📎 See Also
 
-- [[solution-scaffolding-and-contracts]] — Scaffold created the Identity project
-- [[backend-for-frontend-pattern]] — BFF proxies the Identity endpoint
+- [[01-solution-scaffolding-and-contracts]] — Scaffold created the Identity project
+- [[08-backend-for-frontend-pattern]] — BFF proxies the Identity endpoint
 
 ---
 

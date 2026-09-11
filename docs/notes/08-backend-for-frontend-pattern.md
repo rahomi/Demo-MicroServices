@@ -128,7 +128,7 @@ sequenceDiagram
 ```
 
 > [!danger]
-> If Baskets succeeds but Orders fails, the basket is **already cleared** but no order exists. This is the **data inconsistency** that motivates the saga pattern in [[saga-pattern-with-compensation]].
+> If Baskets succeeds but Orders fails, the basket is **already cleared** but no order exists. This is the **data inconsistency** that motivates the saga pattern in [[09-saga-pattern-with-compensation]].
 
 ---
 
@@ -209,17 +209,17 @@ All endpoints from all services visible in one Swagger page
 - [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
 - [x] BFF starts on port 5000, Swagger UI accessible
 - [x] Error handling: downstream unreachable → clean 503 JSON
-- [x] Full end-to-end test verified via Docker Compose in [[docker-compose-and-containerization]]
+- [x] Full end-to-end test verified via Docker Compose in [[11-docker-compose-and-containerization]]
 
 ---
 
 ## 📎 See Also
 
-- [[cqrs-with-mediatr]] — Products endpoints proxied by BFF
-- [[basket-operations-and-event-consumer]] — Baskets endpoints proxied by BFF
-- [[order-submission-and-events]] — Orders endpoints proxied by BFF
-- [[saga-pattern-with-compensation]] — Saga replaces the synchronous checkout
-- [[docker-compose-and-containerization]] — BFF containerized with Docker
+- [[03-cqrs-with-mediatr]] — Products endpoints proxied by BFF
+- [[04-basket-operations-and-event-consumer]] — Baskets endpoints proxied by BFF
+- [[06-order-submission-and-events]] — Orders endpoints proxied by BFF
+- [[09-saga-pattern-with-compensation]] — Saga replaces the synchronous checkout
+- [[11-docker-compose-and-containerization]] — BFF containerized with Docker
 
 ---
 

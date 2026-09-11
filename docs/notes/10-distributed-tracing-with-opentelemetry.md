@@ -67,7 +67,7 @@ sequenceDiagram
 ```
 
 > [!info]
-> The trace crosses the **async messaging boundary** because `EventPublisher` injects the W3C `traceparent` header into RabbitMQ message properties, and `EventConsumer` extracts it to create a **linked activity**. This was built in [[solution-scaffolding-and-contracts]] — this ticket just wires up the SDK.
+> The trace crosses the **async messaging boundary** because `EventPublisher` injects the W3C `traceparent` header into RabbitMQ message properties, and `EventConsumer` extracts it to create a **linked activity**. This was built in [[01-solution-scaffolding-and-contracts]] — this ticket just wires up the SDK.
 
 ---
 
@@ -152,7 +152,7 @@ One line per service: `builder.Services.AddOpenTelemetryTracing(builder.Configur
 ### Step 4 — Add config to all 6 appsettings.json
 `OTEL_SERVICE_NAME` (unique per service) + `OTEL_EXPORTER_OTLP_ENDPOINT`
 
-### Step 5 — Add Jaeger container (done in [[docker-compose-and-containerization]])
+### Step 5 — Add Jaeger container (done in [[11-docker-compose-and-containerization]])
 `jaegertracing/all-in-one:1.62` with `COLLECTOR_OTLP_ENABLED=true`, ports 16686 (UI) + 4317 (OTLP)
 
 ---
@@ -171,16 +171,16 @@ One line per service: `builder.Services.AddOpenTelemetryTracing(builder.Configur
 ## ✅ Testing & Verification
 
 - [x] Build verification — 0 errors, 0 warnings
-- [x] Full stack verification (Docker Compose + Jaeger) — verified in [[docker-compose-and-containerization]]
-- [x] Trace visibility in Jaeger UI — Jaeger container added in [[docker-compose-and-containerization]]
+- [x] Full stack verification (Docker Compose + Jaeger) — verified in [[11-docker-compose-and-containerization]]
+- [x] Trace visibility in Jaeger UI — Jaeger container added in [[11-docker-compose-and-containerization]]
 
 ---
 
 ## 📎 See Also
 
-- [[solution-scaffolding-and-contracts]] — Traceparent injection/extraction built here (EventPublisher + EventConsumer)
-- [[docker-compose-and-containerization]] — Jaeger container + OTLP endpoint configuration
-- [[api-documentation]] — README with Jaeger UI access instructions
+- [[01-solution-scaffolding-and-contracts]] — Traceparent injection/extraction built here (EventPublisher + EventConsumer)
+- [[11-docker-compose-and-containerization]] — Jaeger container + OTLP endpoint configuration
+- [[12-api-documentation]] — README with Jaeger UI access instructions
 
 ---
 

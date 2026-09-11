@@ -233,16 +233,16 @@ EF Core InMemory, `DbSet<SagaState>`
 ## ✅ Testing & Verification
 
 - [x] `dotnet build EcommerceDemo.slnx` — 0 errors, 0 warnings
-- [x] Full stack verification (Docker Compose with saga failure simulation) — verified in [[docker-compose-and-containerization]]
+- [x] Full stack verification (Docker Compose with saga failure simulation) — verified in [[11-docker-compose-and-containerization]]
 
 ---
 
 ## 📎 See Also
 
-- [[backend-for-frontend-pattern]] — Synchronous checkout (the "before" that saga replaces)
-- [[basket-operations-and-event-consumer]] — Basket restore endpoint (compensating action)
-- [[order-submission-and-events]] — Order cancel endpoint (compensating action)
-- [[docker-compose-and-containerization]] — Docker Compose for full stack testing
+- [[08-backend-for-frontend-pattern]] — Synchronous checkout (the "before" that saga replaces)
+- [[04-basket-operations-and-event-consumer]] — Basket restore endpoint (compensating action)
+- [[06-order-submission-and-events]] — Order cancel endpoint (compensating action)
+- [[11-docker-compose-and-containerization]] — Docker Compose for full stack testing
 
 ---
 

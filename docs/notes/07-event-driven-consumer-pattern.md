@@ -153,16 +153,16 @@ GET /api/notifications — returns all received events, most recent first
 - [x] `dotnet build EcommerceDemo.slnx` — 0 warnings, 0 errors
 - [x] `GET /api/notifications` returns `[]` (empty — no RabbitMQ running locally)
 - [x] Both consumers registered as BackgroundServices, start on startup, retry RabbitMQ connection every 5s
-- [x] Full event flow verified via Docker Compose in [[docker-compose-and-containerization]]
+- [x] Full event flow verified via Docker Compose in [[11-docker-compose-and-containerization]]
 
 ---
 
 ## 📎 See Also
 
-- [[solution-scaffolding-and-contracts]] — `EventConsumer<T>` base class
-- [[cqrs-with-mediatr]] — Publishes `ProductChanged` consumed here
-- [[order-submission-and-events]] — Publishes `OrderSubmitted` consumed here
-- [[docker-compose-and-containerization]] — Full event flow verified with Docker Compose
+- [[01-solution-scaffolding-and-contracts]] — `EventConsumer<T>` base class
+- [[03-cqrs-with-mediatr]] — Publishes `ProductChanged` consumed here
+- [[06-order-submission-and-events]] — Publishes `OrderSubmitted` consumed here
+- [[11-docker-compose-and-containerization]] — Full event flow verified with Docker Compose
 
 ---
 

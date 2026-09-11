@@ -204,14 +204,14 @@ docker compose up --build
 
 ## 📎 See Also
 
-- [[cqrs-with-mediatr]] — Products service containerized
-- [[basket-operations-and-event-consumer]] — Baskets service containerized
-- [[minimal-service-boundary]] — Identity service containerized
-- [[order-submission-and-events]] — Orders service containerized
-- [[event-driven-consumer-pattern]] — Notifications service containerized
-- [[backend-for-frontend-pattern]] — BFF service containerized
-- [[saga-pattern-with-compensation]] — Saga endpoints for full stack testing
-- [[distributed-tracing-with-opentelemetry]] — OpenTelemetry configuration (Jaeger container)
+- [[03-cqrs-with-mediatr]] — Products service containerized
+- [[04-basket-operations-and-event-consumer]] — Baskets service containerized
+- [[05-minimal-service-boundary]] — Identity service containerized
+- [[06-order-submission-and-events]] — Orders service containerized
+- [[07-event-driven-consumer-pattern]] — Notifications service containerized
+- [[08-backend-for-frontend-pattern]] — BFF service containerized
+- [[09-saga-pattern-with-compensation]] — Saga endpoints for full stack testing
+- [[10-distributed-tracing-with-opentelemetry]] — OpenTelemetry configuration (Jaeger container)
 
 ---
 
