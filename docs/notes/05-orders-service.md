@@ -1,5 +1,5 @@
 ---
-ticket: "Implementation Ticket 5"
+ticket: "5"
 title: "Orders service: MediatR CQRS + EF Core InMemory + order endpoints + OrderSubmitted event + Swagger UI"
 type: "task"
 date_completed: "2026-09-10"
@@ -66,8 +66,7 @@ Build succeeded.
 ## Dependencies
 
 - **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** BFF: Refit clients + routing map + checkout orchestration (BFF needs Orders endpoints to proxy)
-- **Unblocks:** Saga pattern: orchestration-based checkout (saga needs Orders to create orders and cancel them)
+- **Unblocks:** [[07-bff-service]] (BFF needs Orders endpoints to proxy), [[08-saga-orchestration]] (Saga needs Orders to create and cancel orders)
 
 ## Notes for presentation
 
@@ -80,6 +79,7 @@ Build succeeded.
 
 ## Next steps
 
-- Notifications service (Ticket 6) is unblocked — can consume `OrderSubmitted` events
-- BFF (Ticket 7) needs Orders endpoints to proxy — now available
-- Saga pattern (Ticket 8) needs Orders to create and cancel orders — now available
+All downstream tickets have been completed:
+- [[06-notifications-service]] — Notifications consumes `OrderSubmitted` events (done)
+- [[07-bff-service]] — BFF proxies Orders endpoints (done)
+- [[08-saga-orchestration]] — Saga uses Orders submit + cancel (done)

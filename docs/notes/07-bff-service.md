@@ -1,5 +1,5 @@
 ---
-ticket: "Implementation Ticket 7"
+ticket: "7"
 title: "BFF: Refit clients + routing map + checkout orchestration + error handling + Swagger UI"
 type: "task"
 date_completed: "2026-09-10"
@@ -61,7 +61,7 @@ Built the complete BFF (Backend for Frontend) service with Refit client interfac
 - [x] `GET /api/products` — Returns clean 503 JSON (Products not running — expected)
 - [x] Error handling works: downstream unreachable → 503, no unhandled exceptions
 - [x] Refit clients correctly route to configured downstream URLs (confirmed in logs)
-- [ ] Full end-to-end test (BFF → downstream services) — deferred to Docker Compose (Ticket 10)
+- [x] Full end-to-end test (BFF → downstream services) — verified via Docker Compose in [[10-docker-compose]]
 
 ```
 dotnet build EcommerceDemo.slnx --nologo
@@ -73,8 +73,7 @@ Build succeeded.
 ## Dependencies
 
 - **Blocked by:** [[02-products-service]], [[03-baskets-service]], [[04-identity-service]], [[05-orders-service]]
-- **Unblocks:** Saga pattern (Ticket 8) — saga replaces the synchronous checkout
-- **Unblocks:** Docker Compose (Ticket 10) — all six services now exist
+- **Unblocks:** [[08-saga-orchestration]] (Saga replaces the synchronous checkout), [[10-docker-compose]] (all six services now exist, ready for containerization)
 
 ## Notes for presentation
 
@@ -87,6 +86,7 @@ Build succeeded.
 
 ## Next steps
 
-- Saga pattern (Ticket 8) is unblocked — replaces synchronous checkout with orchestration-based compensation
-- Distributed tracing (Ticket 9) is unblocked — can add OpenTelemetry to all services
-- Docker Compose (Ticket 10) is unblocked — all six services now exist, ready for containerization
+All downstream tickets have been completed:
+- [[08-saga-orchestration]] — Saga pattern (done)
+- [[09-distributed-tracing]] — Distributed tracing (done)
+- [[10-docker-compose]] — Docker Compose (done)

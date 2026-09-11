@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "01-scaffold-solution.md",
+                "file": "11-http-examples-and-readme.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "01-scaffold-solution"
+              "title": "11-http-examples-and-readme"
             }
           }
         ]
@@ -168,6 +168,14 @@
   },
   "active": "d7e3b807fc8dd824",
   "lastOpenFiles": [
-    "03-rabbitmq-contracts-design.md"
+    "retrospective.md",
+    "README.md",
+    "T03-rabbitmq-contracts-design.md",
+    "05-orders-service.md",
+    "04-identity-service.md",
+    "03-rabbitmq-contracts-design.md",
+    "03-baskets-service.md",
+    "02-products-service.md",
+    "01-scaffold-solution.md"
   ]
 }

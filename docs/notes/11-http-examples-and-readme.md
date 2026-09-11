@@ -72,6 +72,8 @@ Build succeeded.
 - **Blocked by:** [[10-docker-compose]] (Docker Compose topology), [[08-saga-orchestration]] (Saga pattern), [[09-distributed-tracing]] (Distributed tracing)
 - **Unblocks:** None — this is the final implementation ticket
 
+> The README documents all services ([[02-products-service]], [[03-baskets-service]], [[04-identity-service]], [[05-orders-service]], [[06-notifications-service]], [[07-bff-service]]), the saga pattern ([[08-saga-orchestration]]), distributed tracing ([[09-distributed-tracing]]), and the Docker Compose topology ([[10-docker-compose]]).
+
 ## Notes for presentation
 
 - The `api.http` file is the primary demo tool — open it in VS Code with the REST Client extension and walk through the sections in order.

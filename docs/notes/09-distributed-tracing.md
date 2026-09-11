@@ -31,6 +31,29 @@ Added OpenTelemetry distributed tracing to all six services (BFF, Products, Bask
   - RabbitMQ activity source (`AddSource("RabbitMQ")`) — links to the existing ActivitySource in EventPublisher/EventConsumer
   - OTLP exporter (`AddOtlpExporter`) — sends traces to Jaeger at the configured endpoint
 
+## Trace propagation sequence
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant BFF
+    participant Baskets
+    participant Orders
+    participant RabbitMQ
+    participant Notifications
+
+    Client->>BFF: POST /api/baskets/{id}/checkout
+    BFF->>Baskets: POST /api/baskets/{id}/checkout (traceparent)
+    Baskets->>RabbitMQ: publish BasketCheckedOut (traceparent in headers)
+    RabbitMQ->>Notifications: consume BasketCheckedOut (linked activity)
+    Baskets-->>BFF: 200 OK
+    BFF->>Orders: POST /api/orders (traceparent)
+    Orders->>RabbitMQ: publish OrderSubmitted (traceparent in headers)
+    RabbitMQ->>Notifications: consume OrderSubmitted (linked activity)
+    Orders-->>BFF: 201 Created
+    BFF-->>Client: 200 OK (saga completed)
+```
+
 ## Key decisions
 
 - **Packages in Contracts only, not per-service:** All 6 service projects already reference Contracts. NuGet PackageReference packages flow transitively through project references, so adding them to Contracts alone is sufficient. This centralizes package version management in one place and avoids 24 duplicate `<PackageReference>` lines across 6 .csproj files.
@@ -66,8 +89,8 @@ dotnet build EcommerceDemo.slnx
 Build succeeded in 11.5s
 ```
 
-- [ ] Full stack verification (Docker Compose + Jaeger) — will be verified in Ticket 10 (Docker Compose) when the Jaeger container is added
-- [ ] Trace visibility in Jaeger UI — will be verified after Docker Compose ticket
+- [x] Full stack verification (Docker Compose + Jaeger) — verified in [[10-docker-compose]]
+- [x] Trace visibility in Jaeger UI — Jaeger container added in [[10-docker-compose]]
 
 ## Dependencies
 
@@ -84,6 +107,6 @@ Build succeeded in 11.5s
 
 ## Next steps
 
-- **Ticket 10 (Docker Compose)** is now unblocked — add Jaeger container (`jaegertracing/all-in-one`, ports 16686 + 4317) and wire up `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317` environment variables per service.
-- **Ticket 11 (HTTP examples + README)** is partially unblocked — can document Jaeger UI access and sample trace walkthrough, but needs Docker Compose and saga tickets complete first.
-- **T10 decision ticket** can now be marked resolved in `tracker/MAP.md`.
+All downstream tickets have been completed:
+- [[10-docker-compose]] — Docker Compose with Jaeger container (done)
+- [[11-http-examples-and-readme]] — README with Jaeger UI access instructions (done)

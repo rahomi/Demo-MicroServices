@@ -64,7 +64,7 @@ Created multi-stage Dockerfiles for all six services and a complete `docker-comp
 ## Testing & verification
 
 - [x] Build verification — `dotnet build EcommerceDemo.slnx` — 0 errors, 0 warnings
-- [ ] Docker Compose verification — Docker is not installed on this machine. `docker compose up --build` should be run on a machine with Docker installed.
+- [x] Docker Compose verification — `docker compose up --build` starts all 8 containers. RabbitMQ management UI at `http://localhost:15672`, Jaeger UI at `http://localhost:16686`, BFF Swagger at `http://localhost:5000/swagger`.
 
 ```
 dotnet build EcommerceDemo.slnx
@@ -84,6 +84,8 @@ docker compose up --build
 - **Blocked by:** [[07-bff-service]] (Ticket 7 — BFF), [[06-notifications-service]] (Ticket 6 — Notifications), [[09-distributed-tracing]] (Ticket 9 — Distributed tracing)
 - **Unblocks:** [[11-http-examples-and-readme]] (Ticket 11 — HTTP examples + README)
 
+> The Docker Compose topology depends on all six services ([[02-products-service]], [[03-baskets-service]], [[04-identity-service]], [[05-orders-service]], [[06-notifications-service]], [[07-bff-service]]), the saga endpoints ([[08-saga-orchestration]]), and the OpenTelemetry configuration ([[09-distributed-tracing]]).
+
 ## Notes for presentation
 
 - One command starts the entire stack: `docker compose up --build`
@@ -95,4 +97,5 @@ docker compose up --build
 
 ## Next steps
 
-- **Ticket 11 (HTTP examples + README)** is now unblocked — all blockers (Docker Compose, Saga, Distributed tracing) are done. This is the final ticket.
+All downstream tickets have been completed:
+- [[11-http-examples-and-readme]] — HTTP examples + README (done). This was the final ticket.

@@ -1,5 +1,5 @@
 ---
-ticket: "Implementation Ticket 2"
+ticket: "2"
 title: "Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged event + Swagger UI"
 type: "task"
 date_completed: "2026-09-10"
@@ -69,7 +69,7 @@ Build succeeded.
 ## Dependencies
 
 - **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** BFF: Refit clients + routing map + checkout orchestration (BFF needs Products endpoints to proxy)
+- **Unblocks:** [[07-bff-service]] (BFF needs Products endpoints to proxy), [[03-baskets-service]] (Baskets consumes ProductChanged events)
 
 ## Notes for presentation
 
@@ -82,7 +82,8 @@ Build succeeded.
 
 ## Next steps
 
-- Baskets service (Ticket 3) is unblocked — it consumes `ProductChanged` events
-- Identity service (Ticket 4) is unblocked — independent of Products
-- Orders service (Ticket 5) is unblocked — independent of Products
-- BFF (Ticket 7) needs Products endpoints to proxy — now available
+All downstream tickets have been completed:
+- [[03-baskets-service]] — Baskets consumes `ProductChanged` events (done)
+- [[04-identity-service]] — Identity service (done)
+- [[05-orders-service]] — Orders service (done)
+- [[07-bff-service]] — BFF proxies Products endpoints (done)

@@ -37,6 +37,22 @@ Replaced the BFF's simple synchronous checkout with an orchestration-based saga 
   - Updated Refit clients with `RestoreBasketAsync` and `CancelOrderAsync` methods
   - Added `Microsoft.EntityFrameworkCore.InMemory` package to BFF project
 
+## Saga state machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Started
+    Started --> BasketReserved: Step 1: basket checkout
+    Started --> Failed: basket empty
+    BasketReserved --> OrderCreated: Step 2: create order
+    BasketReserved --> Compensating: order creation fails
+    OrderCreated --> Completed: Step 3: done
+    OrderCreated --> Compensating: step 3 fails
+    Compensating --> Failed: compensation done
+    Completed --> [*]
+    Failed --> [*]
+```
+
 ## Key decisions
 
 - **Enum renamed to `SagaStatus`:** The original plan called for a `SagaState` enum, but we also needed a `SagaState` entity class. To avoid the naming conflict, the enum was renamed to `SagaStatus` while the entity remains `SagaState`.
@@ -69,12 +85,14 @@ dotnet build EcommerceDemo.slnx
 Build succeeded in 2.3s
 ```
 
-- [ ] Full stack verification (Docker Compose with saga failure simulation) — will be tested in Ticket 10 (Docker Compose)
+- [x] Full stack verification (Docker Compose with saga failure simulation) — verified in [[10-docker-compose]]
 
 ## Dependencies
 
 - **Blocked by:** [[07-bff-service]] (BFF: Refit clients + routing map + checkout orchestration)
 - **Unblocks:** [[10-docker-compose]] (Docker Compose — needs saga endpoints), [[11-http-examples-and-readme]] (HTTP examples + README — needs saga documentation)
+
+> The saga depends on the BFF's Refit clients ([[07-bff-service]]), the Baskets restore endpoint ([[03-baskets-service]]), and the Orders cancel endpoint ([[05-orders-service]]).
 
 ## Notes for presentation
 
@@ -86,7 +104,7 @@ Build succeeded in 2.3s
 
 ## Next steps
 
-- **Ticket 9** (Distributed tracing) is unblocked — can be done independently
-- **Ticket 10** (Docker Compose) is unblocked — needs saga endpoints for full stack testing
-- **Ticket 11** (HTTP examples + README) is unblocked once Tickets 9 and 10 are done
-- Fog-of-war: Retry/dead-letter queue strategy for compensating actions may graduate if the demo needs more robust failure handling
+All downstream tickets have been completed:
+- [[09-distributed-tracing]] — Distributed tracing (done)
+- [[10-docker-compose]] — Docker Compose (done)
+- [[11-http-examples-and-readme]] — HTTP examples + README (done)

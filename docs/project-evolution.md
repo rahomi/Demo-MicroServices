@@ -20,7 +20,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 |--------|-------|--------|-----------------|
 | T01 | Verify .NET SDK and establish solution/project structure | ✅ Done | [[01-scaffold-solution]] |
 | T02 | MediatR migration strategy for Products and Baskets | ⬜ Open | — |
-| T03 | RabbitMQ contracts and connection infrastructure design | ✅ Done | [[03-rabbitmq-contracts-design]] |
+| T03 | RabbitMQ contracts and connection infrastructure design | ✅ Done | [[T03-rabbitmq-contracts-design]] |
 | T04 | BFF routing map and Refit client contracts | ⬜ Open | — |
 | T05 | Orders and Identity service design | ⬜ Open | — |
 | T06 | Notifications service and event flow design | ⬜ Open | — |
@@ -50,7 +50,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 > As each ticket is completed, create a note from the [template](templates/ticket-completion.md) and link it here. The notes form the project's evolution narrative.
 
 1. [[01-scaffold-solution]] — Scaffold EcommerceDemo solution, projects, and shared Contracts (T01 + Ticket 1)
-2. [[03-rabbitmq-contracts-design]] — RabbitMQ contracts and connection infrastructure design (T03)
+2. [[T03-rabbitmq-contracts-design]] — RabbitMQ contracts and connection infrastructure design (T03)
 3. [[02-products-service]] — Products service: MediatR CQRS + EF Core InMemory + CRUD + ProductChanged + Swagger UI (Ticket 2)
 4. [[03-baskets-service]] — Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut + ProductChanged consumer + Swagger UI (Ticket 3)
 5. [[04-identity-service]] — Identity service: fake customer endpoint + Swagger UI (Ticket 4)
@@ -61,6 +61,7 @@ This is the **Obsidian index** for tracking the project's growth. Every ticket c
 10. [[09-distributed-tracing]] — Distributed tracing: OpenTelemetry + Jaeger (Ticket 9)
 11. [[10-docker-compose]] — Docker Compose: Dockerfiles + compose topology + RabbitMQ + Jaeger (Ticket 10)
 12. [[11-http-examples-and-readme]] — HTTP examples + README documentation (Ticket 11)
+13. [[retrospective]] — Project retrospective: lessons learned, surprises, and what we'd do differently
 
 ## 🏷️ Tag Legend
 

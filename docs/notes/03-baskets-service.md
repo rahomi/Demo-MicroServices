@@ -1,5 +1,5 @@
 ---
-ticket: "Implementation Ticket 3"
+ticket: "3"
 title: "Baskets service: MediatR CQRS + EF Core InMemory + basket ops + BasketCheckedOut event + ProductChanged consumer + Swagger UI"
 type: "task"
 date_completed: "2026-09-10"
@@ -73,7 +73,7 @@ Build succeeded.
 ## Dependencies
 
 - **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** BFF: Refit clients + routing map + checkout orchestration (BFF needs Baskets endpoints to proxy)
+- **Unblocks:** [[07-bff-service]] (BFF needs Baskets endpoints to proxy), [[08-saga-orchestration]] (Saga needs Baskets checkout + restore endpoints)
 
 ## Notes for presentation
 
@@ -87,7 +87,9 @@ Build succeeded.
 
 ## Next steps
 
-- Identity service (Ticket 4) is unblocked — independent of Baskets
-- Orders service (Ticket 5) is unblocked — independent of Baskets
-- Notifications service (Ticket 6) is unblocked — can consume `BasketCheckedOut` events
-- BFF (Ticket 7) needs Baskets endpoints to proxy — now available
+All downstream tickets have been completed:
+- [[04-identity-service]] — Identity service (done)
+- [[05-orders-service]] — Orders service (done)
+- [[06-notifications-service]] — Notifications service (done)
+- [[07-bff-service]] — BFF proxies Baskets endpoints (done)
+- [[08-saga-orchestration]] — Saga uses Baskets checkout + restore (done)

@@ -1,5 +1,5 @@
 ---
-ticket: "T01 + Implementation Ticket 1"
+ticket: "1"
 title: "Scaffold EcommerceDemo solution, projects, and shared Contracts"
 type: "task"
 date_completed: "2026-09-09"
@@ -39,6 +39,26 @@ Established the .NET solution structure for the EcommerceDemo microservices proj
   - Shared `ActivitySource` named `"RabbitMQ"` for OpenTelemetry tracing
 - Each service has a minimal `Program.cs` that starts an empty web server with startup logging
 - Identity service intentionally has no RabbitMQ (minimal per ticket spec)
+
+## Project dependency graph
+
+```mermaid
+flowchart TD
+    Contracts["Contracts<br/>(Events + RabbitMQ infra)"]
+    BFF["BFF"]
+    Products["Products"]
+    Baskets["Baskets"]
+    Orders["Orders"]
+    Notifications["Notifications"]
+    Identity["Identity"]
+
+    BFF --> Contracts
+    Products --> Contracts
+    Baskets --> Contracts
+    Orders --> Contracts
+    Notifications --> Contracts
+    Identity --> Contracts
+```
 
 ## Key decisions
 
@@ -83,7 +103,7 @@ Build succeeded.
 ## Dependencies
 
 - **Blocked by:** None — this is the first ticket (frontier)
-- **Unblocks:** T02 (MediatR migration), T03 (RabbitMQ contracts design), T05 (Orders/Identity design), T07 (Docker Compose), T10 (OpenTelemetry tracing), and all implementation tickets for Products, Baskets, Identity, Orders, Notifications services
+- **Unblocks:** [[T03-rabbitmq-contracts-design]] (T03 — RabbitMQ contracts design), [[02-products-service]] (Ticket 2 — Products), [[03-baskets-service]] (Ticket 3 — Baskets), [[04-identity-service]] (Ticket 4 — Identity), [[05-orders-service]] (Ticket 5 — Orders), [[06-notifications-service]] (Ticket 6 — Notifications), [[09-distributed-tracing]] (Ticket 9 — Distributed tracing)
 
 ## Notes for presentation
 
@@ -95,8 +115,11 @@ Build succeeded.
 
 ## Next steps
 
-- T02 (MediatR migration strategy) is now unblocked
-- T03 (RabbitMQ contracts design) is now unblocked — the Contracts project already implements much of what T03 specifies
-- T10 (OpenTelemetry + Jaeger tracing) is now unblocked — the ActivitySource and traceparent infrastructure are in place
-- Implementation tickets for Products, Baskets, Identity, Orders, and Notifications services are unblocked
-- Fog-of-war item "Seed data" will graduate when the Products service implementation begins
+All downstream tickets have been completed. The scaffold laid the foundation for:
+- [[T03-rabbitmq-contracts-design]] — RabbitMQ contracts design (resolved)
+- [[02-products-service]] — Products service (done)
+- [[03-baskets-service]] — Baskets service (done)
+- [[04-identity-service]] — Identity service (done)
+- [[05-orders-service]] — Orders service (done)
+- [[06-notifications-service]] — Notifications service (done)
+- [[09-distributed-tracing]] — Distributed tracing (done)

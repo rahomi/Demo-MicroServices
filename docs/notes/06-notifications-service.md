@@ -1,5 +1,5 @@
 ---
-ticket: "Implementation Ticket 6"
+ticket: "6"
 title: "Notifications service: RabbitMQ consumer + received events endpoint + Swagger UI"
 type: "task"
 date_completed: "2026-09-10"
@@ -54,7 +54,7 @@ Built the complete Notifications service that consumes `OrderSubmitted` and `Pro
 - [x] `GET /api/notifications` — Returns `[]` (empty list, expected — no RabbitMQ running) (200 OK)
 - [x] Swagger UI accessible at `http://localhost:5203/swagger/index.html` (HTTP 200)
 - [x] Both consumers registered as BackgroundServices, start on startup, retry RabbitMQ connection every 5s
-- [ ] Full event flow test (events consumed from RabbitMQ) — deferred to Docker Compose ticket (Ticket 10)
+- [x] Full event flow test (events consumed from RabbitMQ) — verified via Docker Compose in [[10-docker-compose]]
 
 ```
 dotnet build EcommerceDemo.slnx --nologo
@@ -66,8 +66,7 @@ Build succeeded.
 ## Dependencies
 
 - **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** BFF: Refit clients + routing map + checkout orchestration (BFF doesn't directly depend on Notifications, but the full stack needs all services)
-- **Unblocks:** Docker Compose: Dockerfiles + compose topology (all services must exist before Docker Compose)
+- **Unblocks:** [[07-bff-service]] (full stack needs all services), [[10-docker-compose]] (all services must exist before Docker Compose)
 
 ## Notes for presentation
 
@@ -80,6 +79,7 @@ Build succeeded.
 
 ## Next steps
 
-- BFF (Ticket 7) is unblocked — all downstream services (Products, Baskets, Orders, Identity, Notifications) now exist
-- Saga pattern (Ticket 8) is unblocked — needs BFF and Orders
-- Docker Compose (Ticket 10) is one step closer — all six services now exist
+All downstream tickets have been completed:
+- [[07-bff-service]] — BFF (done)
+- [[08-saga-orchestration]] — Saga pattern (done)
+- [[10-docker-compose]] — Docker Compose (done)

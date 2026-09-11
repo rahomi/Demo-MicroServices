@@ -1,5 +1,5 @@
 ---
-ticket: "Implementation Ticket 4"
+ticket: "4"
 title: "Identity service: fake customer endpoint + Swagger UI"
 type: "task"
 date_completed: "2026-09-10"
@@ -53,7 +53,7 @@ Build succeeded.
 ## Dependencies
 
 - **Blocked by:** [[01-scaffold-solution]] — Scaffold solution, projects, and shared Contracts
-- **Unblocks:** BFF: Refit clients + routing map + checkout orchestration (BFF needs Identity endpoint to proxy)
+- **Unblocks:** [[07-bff-service]] (BFF needs Identity endpoint to proxy)
 
 ## Notes for presentation
 
@@ -64,6 +64,7 @@ Build succeeded.
 
 ## Next steps
 
-- Orders service (Ticket 5) is unblocked — independent of Identity
-- Notifications service (Ticket 6) is unblocked — independent of Identity
-- BFF (Ticket 7) needs Identity endpoint to proxy — now available
+All downstream tickets have been completed:
+- [[05-orders-service]] — Orders service (done)
+- [[06-notifications-service]] — Notifications service (done)
+- [[07-bff-service]] — BFF proxies Identity endpoint (done)

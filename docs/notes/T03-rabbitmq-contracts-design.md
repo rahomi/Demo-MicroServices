@@ -54,7 +54,7 @@ Build succeeded.
 ## Dependencies
 
 - **Blocked by:** [[01-scaffold-solution]] (T01 — scaffold created the Contracts project)
-- **Unblocks:** T05 (Orders and Identity service design), T06 (Notifications service and event flow design), T04 (BFF routing — still blocked by T02)
+- **Unblocks:** [[05-orders-service]] (Orders service), [[06-notifications-service]] (Notifications service), [[07-bff-service]] (BFF routing)
 
 ## Notes for presentation
 
@@ -66,8 +66,10 @@ Build succeeded.
 
 ## Next steps
 
-- **T05** (Orders and Identity service design) is now unblocked — on the frontier
-- **T06** (Notifications service and event flow design) is now unblocked — on the frontier
-- **T02** (MediatR migration strategy) is still on the frontier — resolving it unblocks T04 (BFF)
-- **T10** (OpenTelemetry + Jaeger tracing) is on the frontier — the traceparent infrastructure is already in place
-- Implementation tickets 2–6 (Products, Baskets, Identity, Orders, Notifications) are all unblocked
+All downstream tickets have been completed:
+- [[02-products-service]] — Products service (done)
+- [[03-baskets-service]] — Baskets service (done)
+- [[04-identity-service]] — Identity service (done)
+- [[05-orders-service]] — Orders service (done)
+- [[06-notifications-service]] — Notifications service (done)
+- [[09-distributed-tracing]] — Distributed tracing (done, uses the traceparent infrastructure from T01)
