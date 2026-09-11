@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "03-cqrs-with-mediatr.md",
+                "file": "09-saga-pattern-with-compensation.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "03-cqrs-with-mediatr"
+              "title": "09-saga-pattern-with-compensation"
             }
           }
         ]
@@ -168,10 +168,10 @@
   },
   "active": "d7e3b807fc8dd824",
   "lastOpenFiles": [
+    "03-cqrs-with-mediatr.md",
     "12-api-documentation.md",
     "07-event-driven-consumer-pattern.md",
     "04-basket-operations-and-event-consumer.md",
-    "03-cqrs-with-mediatr.md",
     "02-rabbitmq-messaging-topology.md",
     "01-solution-scaffolding-and-contracts.md",
     "api-documentation.md",
