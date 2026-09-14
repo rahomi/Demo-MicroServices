@@ -48,6 +48,14 @@ docker-compose.override.yml
 docs/.obsidian/workspace.json
 docs/.obsidian/workspace-mobile.json
 
+## Node / Frontend
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
 ## OS
 .DS_Store
 Thumbs.db
+
+.superpowers
+

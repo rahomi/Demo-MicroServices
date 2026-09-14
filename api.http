@@ -13,11 +13,11 @@
 ### ───────────────────────────────────────────────
 
 @bff = http://localhost:5000
-@products = http://localhost:5001
-@baskets = http://localhost:5002
-@orders = http://localhost:5003
-@notifications = http://localhost:5004
-@identity = http://localhost:5005
+@products = http://localhost:5024
+@baskets = http://localhost:5201
+@orders = http://localhost:5202
+@notifications = http://localhost:5203
+@identity = http://localhost:5003
 
 ### Seeded product IDs (available after Products service starts)
 @productId1 = 11111111-1111-1111-1111-111111111111

@@ -37,7 +37,7 @@ This is an **educational demonstration** — not a production platform. Every se
 docker compose up --build
 ```
 
-This builds and starts all eight containers:
+This builds and starts all nine containers:
 
 | Container | Description |
 |-----------|-------------|
@@ -49,12 +49,13 @@ This builds and starts all eight containers:
 | `orders` | Orders service (port 5003) |
 | `notifications` | Notifications service (port 5004) |
 | `identity` | Identity service (port 5005) |
+| `frontend` | React + Vite frontend (nginx-served, port 3000) |
 
-Wait ~30 seconds for RabbitMQ to become healthy and all services to connect. Then open the BFF Swagger UI:
+Wait ~30 seconds for RabbitMQ to become healthy and all services to connect. Then open:
 
-```
-http://localhost:5000/swagger
-```
+- **Frontend UI:** `http://localhost:3000` — storefront + admin panel
+- **BFF Swagger UI:** `http://localhost:5000/swagger`
+
 
 ### Stop the stack
 
@@ -68,6 +69,7 @@ docker compose down
 
 | Service | URL | Swagger UI | Port |
 |---------|-----|------------|------|
+| **Frontend (React UI)** | `http://localhost:3000` | — | 3000 |
 | BFF (entry point) | `http://localhost:5000` | `http://localhost:5000/swagger` | 5000 |
 | Products | `http://localhost:5001` | `http://localhost:5001/swagger` | 5001 |
 | Baskets | `http://localhost:5002` | `http://localhost:5002/swagger` | 5002 |
@@ -76,6 +78,7 @@ docker compose down
 | Identity | `http://localhost:5005` | `http://localhost:5005/swagger` | 5005 |
 | RabbitMQ Management | `http://localhost:15672` | — | 15672 |
 | Jaeger UI | `http://localhost:16686` | — | 16686 |
+
 
 > **RabbitMQ credentials:** `guest` / `guest`
 
@@ -473,9 +476,20 @@ dotnet run
 dotnet build EcommerceDemo.slnx
 ```
 
+### 5. Run the frontend (optional)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite dev server runs on `http://localhost:5173` and proxies API calls to the BFF (`localhost:5000`) and Notifications service (`localhost:5004`).
+
 ---
 
 ## In-Memory Database Reset Limitations
+
 
 This demo uses **EF Core InMemory** databases. Important implications:
 
@@ -524,8 +538,19 @@ Demo-Microservices/
 │   └── templates/               # Ticket completion note template
 ├── tracker/
 │   ├── MAP.md                   # Wayfinder map
+│   ├── FRONTEND-MAP.md          # Frontend wayfinder map
 │   └── tickets/                 # Decision ticket details
+├── frontend/                    # React + Vite + TypeScript frontend
+│   ├── src/
+│   │   ├── lib/                 # API client, types, queryClient, constants
+│   │   ├── hooks/               # TanStack Query hooks (products, basket, orders, saga, notifications)
+│   │   ├── components/          # shadcn/ui components + shared layout
+│   │   └── routes/              # Page components (shop/*, admin/*)
+│   ├── Dockerfile               # Multi-stage build → nginx
+│   ├── nginx.conf               # Static serve + API proxy
+│   └── package.json
 └── EcommerceDemo/
+
     ├── Contracts/               # Shared: event DTOs, RabbitMQ infra, OpenTelemetry extensions
     │   ├── Events/              # IntegrationEvents.cs (OrderSubmitted, ProductChanged, BasketCheckedOut)
     │   └── Messaging/           # IRabbitMqConnection, EventPublisher, EventConsumer, DI extensions
