@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/notifications': {
-        target: 'http://localhost:5004',
+        target: 'http://localhost:5203',
         changeOrigin: true,
       },
       '/api': {

@@ -5,7 +5,7 @@ import { CUSTOMER_ID } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 const shopLinks = [
-  { to: '/shop/products', label: 'Products', icon: Package },
+  { to: '/shop/products', label: 'Catalog', icon: Package },
   { to: '/shop/basket', label: 'Basket', icon: ShoppingCart },
   { to: '/shop/orders', label: 'Orders', icon: ClipboardList },
 ]

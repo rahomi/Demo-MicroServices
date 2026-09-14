@@ -58,7 +58,6 @@ public class CheckoutSagaOrchestrator
         };
 
         _sagaDb.Sagas.Add(saga);
-        await _sagaDb.SaveChangesAsync(ct);
 
         _logger.LogInformation("Saga {SagaId} started for customer {CustomerId}.", saga.Id, customerId);
 
@@ -89,8 +88,6 @@ public class CheckoutSagaOrchestrator
             .ToList();
         saga.SetBasketSnapshot(snapshot);
         saga.CurrentState = SagaStatus.BasketReserved;
-        saga.UpdatedAt = DateTime.UtcNow;
-        await _sagaDb.SaveChangesAsync(ct);
 
         _logger.LogInformation("Saga {SagaId}: Step 1 complete — basket reserved. {ItemCount} items captured in snapshot.",
             saga.Id, snapshot.Count);
@@ -116,13 +113,10 @@ public class CheckoutSagaOrchestrator
         }
 
         saga.OrderId = order.Id;
-        saga.CurrentState = SagaStatus.OrderCreated;
-        saga.UpdatedAt = DateTime.UtcNow;
-        await _sagaDb.SaveChangesAsync(ct);
 
         _logger.LogInformation("Saga {SagaId}: Step 2 complete — order {OrderId} created.", saga.Id, order.Id);
 
-        // --- Step 3: Complete ---
+        // --- Step 3: Complete — single save with final state ---
         saga.CurrentState = SagaStatus.Completed;
         saga.UpdatedAt = DateTime.UtcNow;
         await _sagaDb.SaveChangesAsync(ct);
@@ -138,8 +132,6 @@ public class CheckoutSagaOrchestrator
     private async Task CompensateAsync(SagaState saga, bool restoreBasket, bool cancelOrder, CancellationToken ct)
     {
         saga.CurrentState = SagaStatus.Compensating;
-        saga.UpdatedAt = DateTime.UtcNow;
-        await _sagaDb.SaveChangesAsync(ct);
 
         _logger.LogWarning("Saga {SagaId}: Compensating — restoreBasket={RestoreBasket}, cancelOrder={CancelOrder}.",
             saga.Id, restoreBasket, cancelOrder);
