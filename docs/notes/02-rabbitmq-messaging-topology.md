@@ -47,7 +47,6 @@ flowchart LR
     Exchange -->|"product.changed"| BasketsQ["baskets.product-changed"]
     Exchange -->|"product.changed"| NotifQ1["notifications.product-changed"]
     Exchange -->|"order.submitted"| NotifQ2["notifications.order-submitted"]
-    Exchange -->|"basket.checkedout"| NotifQ3["notifications.basket-checkedout"]
 ```
 
 #### Routing Key Convention
@@ -56,7 +55,10 @@ flowchart LR
 |-------|-------------|-----------|-----------|
 | Product created/updated/deleted | `product.changed` | Products | Baskets, Notifications |
 | Order submitted | `order.submitted` | Orders | Notifications |
-| Basket checked out | `basket.checkedout` | Baskets | (future) |
+| Basket checked out | `basket.checkedout` | Baskets | None currently |
+
+> [!note]
+> Baskets publishes `BasketCheckedOut`, but no queue is currently bound for it. The event is available for a future consumer; it is not part of the Notifications feed today.
 
 > [!info]
 > Dot-separated routing keys (`product.changed`) are human-readable and support RabbitMQ's topic wildcard matching (`product.*` matches all product events). This is simpler than header-based routing.

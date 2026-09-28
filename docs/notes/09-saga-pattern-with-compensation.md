@@ -149,11 +149,13 @@ Services communicate via **events** autonomously. No central coordinator — eac
 
 ```mermaid
 flowchart LR
-    Baskets["Baskets"] -->|"BasketCheckedOut event"| Orders["Orders"]
-    Orders -->|"OrderSubmitted event"| Notifications["Notifications"]
-    Orders -.->|"OrderFailed event"| Baskets
-    Baskets -.->|"restore basket"| Baskets
+    A["Service A"] -->|"Event A"| B["Service B"]
+    B -->|"Event B"| C["Service C"]
+    C -.->|"Failure event"| A
 ```
+
+> [!note]
+> This is a conceptual choreography example, not this project's event topology. EcommerceDemo uses the orchestrated flow above; `BasketCheckedOut` currently has no consumer.
 
 **Characteristics:**
 - ✅ More scalable — no central coordinator

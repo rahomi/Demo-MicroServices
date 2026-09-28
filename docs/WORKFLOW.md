@@ -1,4 +1,4 @@
-# 🛠️ Developer Workflow — Chapter 19 Microservices Expansion
+# 🛠️ Developer Workflow — EcommerceDemo Microservices
 
 This guide explains how to work through the project's tickets, track progress in Obsidian, and test after each ticket. Follow this workflow for every ticket.
 
@@ -35,10 +35,8 @@ This guide explains how to work through the project's tickets, track progress in
 1. Work through the acceptance criteria as a checklist.
 2. Commit frequently with small, focused commits:
    ```bash
-   git add -A
-   git commit -m "feat(ticket-N): short description of what was done
-
-   Co-Authored-By: Cline SR"
+   git add <changed-files>
+   git commit -m "docs: short description of what changed"
    ```
 3. Use conventional commit prefixes:
    - `feat:` — new feature
@@ -54,27 +52,24 @@ This guide explains how to work through the project's tickets, track progress in
 
 #### Level 1 — Build verification (every ticket)
 ```bash
-dotnet build C19.sln
+dotnet build EcommerceDemo.slnx
 ```
 ✅ Must succeed with zero errors and zero warnings.
 
 #### Level 2 — Service runs (service tickets)
 ```bash
-# Start the specific service
-cd C19/Products && dotnet run
-# In another terminal, test the endpoint
-curl http://localhost:5001/api/products
+dotnet run --project EcommerceDemo/Products/Products.csproj
 ```
+
+In another terminal, verify the endpoint with `curl http://localhost:5001/api/products`.
 ✅ Service starts, endpoint returns expected response.
 
 #### Level 3 — RabbitMQ event verification (messaging tickets)
 ```bash
-# Start RabbitMQ
-docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
-
-# Start the service, trigger an action, check RabbitMQ management UI
-# Open http://localhost:15672 (guest/guest) → Queues tab
+docker compose up -d rabbitmq
 ```
+
+Start the relevant service, trigger an action, then inspect the Queues tab at `http://localhost:15672` (`guest` / `guest`).
 ✅ Event appears in the queue and is consumed.
 
 #### Level 4 — Full stack verification (Docker Compose tickets)
@@ -82,6 +77,8 @@ docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 docker compose up --build
 # Wait for all services to start
 # Run through the .http files or curl commands
+# Frontend: http://localhost:3000
+# BFF Swagger: http://localhost:5000/swagger
 ```
 ✅ All services start, all endpoints work, events flow through RabbitMQ.
 
@@ -126,13 +123,8 @@ The agent should:
 Once the developer confirms:
 
 ```bash
-# Stage all implementation changes
-git add -A
-
-# Commit with conventional commit format
-git commit -m "feat(ticket-N): short description of what was done
-
-Co-Authored-By: Cline SR"
+git add <changed-files>
+git commit -m "feat: short description of what changed"
 ```
 
 Verify the working tree is now clean:
@@ -166,9 +158,7 @@ git status --short
 
 ```bash
 git add docs/notes/ docs/project-evolution.md
-git commit -m "docs(ticket-N): completion note and evolution index update
-
-Co-Authored-By: Cline SR"
+git commit -m "docs: add ticket completion note"
 ```
 
 ### Step 9 — Check what's unblocked

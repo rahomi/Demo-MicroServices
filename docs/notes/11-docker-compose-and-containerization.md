@@ -4,14 +4,14 @@
 > [!abstract]
 > **Core Idea**
 >
-> Docker Compose turns 6 .NET services + RabbitMQ + Jaeger into a single `docker compose up --build` command. This note covers **multi-stage Dockerfiles**, the 8-container topology, **service discovery via container names**, **healthchecks** that prevent services from starting before RabbitMQ is ready, and environment-based configuration.
+> Docker Compose turns 6 .NET services, the frontend, RabbitMQ, and Jaeger into a single `docker compose up --build` command. This note covers **multi-stage Dockerfiles**, the 9-container topology, **service discovery via container names**, **healthchecks** that prevent services from starting before RabbitMQ is ready, and environment-based configuration.
 
 ---
 
 ## 🎯 Learning Objectives
 
 - Write **multi-stage Dockerfiles** for .NET services (SDK build → runtime run)
-- Design a **Docker Compose topology** with 8 containers
+- Design a **Docker Compose topology** with 9 containers
 - Use **service discovery via container names** (Docker DNS)
 - Add **healthchecks** so services wait for RabbitMQ before connecting
 - Configure **environment variables** for RabbitMQ, OpenTelemetry, and downstream URLs
@@ -57,17 +57,18 @@ ENTRYPOINT ["dotnet", "BFF.dll"]
 ```mermaid
 flowchart TB
     subgraph Infrastructure
-        RabbitMQ["RabbitMQ\n3-management\n:5672 :15672"]
-        Jaeger["Jaeger\nall-in-one:1.62\n:16686 :4317"]
+      RabbitMQ["RabbitMQ<br/>3-management<br/>:5672 / :15672"]
+      Jaeger["Jaeger<br/>all-in-one:1.62.0<br/>:16686 / :4317"]
     end
 
     subgraph Services
-        BFF["BFF\n:5000"]
-        Products["Products\n:5001"]
-        Baskets["Baskets\n:5002"]
-        Orders["Orders\n:5003"]
-        Notifications["Notifications\n:5004"]
-        Identity["Identity\n:5005"]
+        BFF["BFF<br/>:5000"]
+        Products["Products<br/>:5001"]
+        Baskets["Baskets<br/>:5002"]
+        Orders["Orders<br/>:5003"]
+        Notifications["Notifications<br/>:5004"]
+        Identity["Identity<br/>:5005"]
+        Frontend["Frontend (nginx)<br/>:3000"]
     end
 
     BFF -->|"depends_on healthy"| RabbitMQ
@@ -79,6 +80,8 @@ flowchart TB
     BFF -->|"http://baskets:5002"| Baskets
     BFF -->|"http://orders:5003"| Orders
     BFF -->|"http://identity:5005"| Identity
+    Frontend -->|"/api/* except notifications"| BFF
+    Frontend -->|"/api/notifications"| Notifications
     Products -->|"OTLP"| Jaeger
     Baskets -->|"OTLP"| Jaeger
     Orders -->|"OTLP"| Jaeger
@@ -154,10 +157,11 @@ services:
 ### Step 1 — Create 6 multi-stage Dockerfiles
 One per service, all following the same pattern: `sdk:10.0` build → `aspnet:10.0` runtime
 
-### Step 2 — Create docker-compose.yml with 8 services
+### Step 2 — Create docker-compose.yml with 9 services
 - `rabbitmq` (3-management, healthcheck, ports 5672+15672)
-- `jaeger` (all-in-one:1.62, COLLECTOR_OTLP_ENABLED=true, ports 16686+4317)
-- 6 service containers with `depends_on: rabbitmq (service_healthy)`
+- `jaeger` (all-in-one:1.62.0, COLLECTOR_OTLP_ENABLED=true, ports 16686+4317)
+- 6 .NET service containers, plus the nginx-served frontend on port 3000
+- Services that use RabbitMQ declare `depends_on: rabbitmq (service_healthy)`
 
 ### Step 3 — Create docker-compose.override.yml
 `ASPNETCORE_ENVIRONMENT=Development` + local port bindings
@@ -180,7 +184,7 @@ Exclude `bin/`, `obj/`, `.vs/`, `.git/` from build context
 | Port map | BFF=5000, Products=5001, Baskets=5002, Orders=5003, Notifications=5004, Identity=5005 | Consistent, easy to remember |
 | Build context | `EcommerceDemo/` directory | Contracts project accessible to all Dockerfiles |
 | Service discovery | Container names (Docker DNS) | No manual host config — `http://products:5001` just works |
-| Jaeger version | `all-in-one:1.62` | Pinned, with `COLLECTOR_OTLP_ENABLED=true` for OTLP |
+| Jaeger version | `all-in-one:1.62.0` | Pinned, with `COLLECTOR_OTLP_ENABLED=true` for OTLP |
 | Identity | No RabbitMQ dependency | Identity has no messaging |
 
 ---
@@ -188,13 +192,14 @@ Exclude `bin/`, `obj/`, `.vs/`, `.git/` from build context
 ## ✅ Testing & Verification
 
 - [x] Build verification — `dotnet build EcommerceDemo.slnx` — 0 errors, 0 warnings
-- [x] Docker Compose verification — `docker compose up --build` starts all 8 containers
+- [x] Docker Compose verification — `docker compose up --build` starts all 9 containers
 
 ```bash
 docker compose up --build
 # RabbitMQ management UI: http://localhost:15672 (guest/guest)
 # Jaeger UI: http://localhost:16686
 # BFF Swagger: http://localhost:5000/swagger
+# Frontend: http://localhost:3000
 ```
 
 ---

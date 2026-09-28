@@ -37,9 +37,10 @@ Trace (checkout request)
 │   │   └── Span: RabbitMQ — publish BasketCheckedOut
 │   └── Span: Orders — POST /api/orders
 │       └── Span: RabbitMQ — publish OrderSubmitted
-├── Span: Notifications — consume BasketCheckedOut (linked)
 └── Span: Notifications — consume OrderSubmitted (linked)
 ```
+
+`BasketCheckedOut` is published but has no consumer queue in the current topology. Notifications consumes `OrderSubmitted` and `ProductChanged`.
 
 #### Why It Exists
 
@@ -125,7 +126,7 @@ flowchart TD
 | **Micrometer** | Metrics library | Application metrics (JVM, HTTP, custom) — not traces |
 
 > [!tip]
-> This project uses **Jaeger** (`jaegertracing/all-in-one:1.62`) because it's free, open-source, and has a great UI for visualizing trace trees. In production, you'd use a managed APM platform (New Relic, Datadog) for alerting and long-term storage.
+> This project uses **Jaeger** (`jaegertracing/all-in-one:1.62.0`) because it's free, open-source, and has a great UI for visualizing trace trees. In production, you'd use a managed APM platform (New Relic, Datadog) for alerting and long-term storage.
 
 ---
 
@@ -177,11 +178,12 @@ sequenceDiagram
     Note over Baskets: span: HTTP request (child of BFF)
     Baskets->>RabbitMQ: publish BasketCheckedOut (traceparent in msg headers)
     Note over RabbitMQ: traceparent stored in headers
-    RabbitMQ->>Notifications: consume BasketCheckedOut (linked activity)
-    Note over Notifications: span: consume (linked to publish span)
     Baskets-->>BFF: 200 OK
     BFF->>Orders: POST /api/orders (traceparent header)
     Note over Orders: span: HTTP request (child of BFF)
+    Orders->>RabbitMQ: publish OrderSubmitted (traceparent in msg headers)
+    RabbitMQ->>Notifications: consume OrderSubmitted (linked activity)
+    Note over Notifications: span: consume (linked to publish span)
     Orders-->>BFF: 201 Created
     BFF-->>Client: 200 OK
 ```
@@ -273,7 +275,7 @@ One line per service: `builder.Services.AddOpenTelemetryTracing(builder.Configur
 `OTEL_SERVICE_NAME` (unique per service) + `OTEL_EXPORTER_OTLP_ENDPOINT`
 
 ### Step 5 — Add Jaeger container (done in [[11-docker-compose-and-containerization]])
-`jaegertracing/all-in-one:1.62` with `COLLECTOR_OTLP_ENABLED=true`, ports 16686 (UI) + 4317 (OTLP)
+`jaegertracing/all-in-one:1.62.0` with `COLLECTOR_OTLP_ENABLED=true`, ports 16686 (UI) + 4317 (OTLP)
 
 ---
 

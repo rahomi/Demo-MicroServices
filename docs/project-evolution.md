@@ -20,27 +20,30 @@ This is the **Obsidian index** for the project's concept notes. Each note in `do
 8. [[08-backend-for-frontend-pattern]] — Backend for Frontend pattern, Refit typed HTTP clients, routing map, checkout orchestration, error handling
 9. [[09-saga-pattern-with-compensation]] — Saga orchestration pattern, state machine, compensating transactions, basket snapshot
 10. [[10-distributed-tracing-with-opentelemetry]] — Distributed tracing with OpenTelemetry + Jaeger, W3C traceparent propagation across HTTP and RabbitMQ
-11. [[11-docker-compose-and-containerization]] — Docker Compose, multi-stage Dockerfiles, service discovery, healthchecks, 8-container topology
+11. [[11-docker-compose-and-containerization]] — Docker Compose, multi-stage Dockerfiles, service discovery, healthchecks, 9-container topology
 12. [[12-api-documentation]] — API documentation with .http files and comprehensive README
+13. [[13-frontend-architecture-and-ui]] — React storefront and admin UI, API routing, client state, and nginx integration
 
 ## 📂 Folder Structure
 
 ```
 docs/
+├── WORKFLOW.md
 ├── project-evolution.md      ← THIS FILE (Obsidian index)
-├── WORKFLOW.md               ← Developer workflow guide
-├── templates/                ← Note templates
-└── notes/                    ← Concept notes
-    ├── solution-scaffolding-and-contracts.md
-    ├── rabbitmq-messaging-topology.md
-    ├── cqrs-with-mediatr.md
-    ├── basket-operations-and-event-consumer.md
-    ├── minimal-service-boundary.md
-    ├── order-submission-and-events.md
-    ├── event-driven-consumer-pattern.md
-    ├── backend-for-frontend-pattern.md
-    ├── saga-pattern-with-compensation.md
-    ├── distributed-tracing-with-opentelemetry.md
-    ├── docker-compose-and-containerization.md
-    └── api-documentation.md
+├── notes/                    ← Numbered concept notes
+│   ├── 01-solution-scaffolding-and-contracts.md
+│   ├── 02-rabbitmq-messaging-topology.md
+│   ├── 03-cqrs-with-mediatr.md
+│   ├── 04-basket-operations-and-event-consumer.md
+│   ├── 05-minimal-service-boundary.md
+│   ├── 06-order-submission-and-events.md
+│   ├── 07-event-driven-consumer-pattern.md
+│   ├── 08-backend-for-frontend-pattern.md
+│   ├── 09-saga-pattern-with-compensation.md
+│   ├── 10-distributed-tracing-with-opentelemetry.md
+│   ├── 11-docker-compose-and-containerization.md
+│   ├── 12-api-documentation.md
+│   └── 13-frontend-architecture-and-ui.md
+├── superpowers/specs/        ← Design specifications
+└── templates/                ← Note templates
 ```

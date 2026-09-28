@@ -108,13 +108,13 @@ docker compose up --build
 | Jaeger UI | http://localhost:16686 | 16686 |
 
 ## Architecture
-[ASCII diagram of 8-container topology]
+[ASCII diagram of 9-container topology, including the nginx frontend]
 
 ## Routing Map
 [BFF route → downstream service]
 
 ## Event Flow
-[checkout → BasketCheckedOut → OrderSubmitted → Notifications]
+[BFF checkout saga → Baskets and Orders over HTTP; Orders publishes OrderSubmitted, consumed by Notifications]
 
 ## Saga Pattern
 [State machine + compensation flow]

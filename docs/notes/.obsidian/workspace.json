@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "10-distributed-tracing-with-opentelemetry.md",
+                "file": "01-solution-scaffolding-and-contracts.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "10-distributed-tracing-with-opentelemetry"
+              "title": "01-solution-scaffolding-and-contracts"
             }
           }
         ]
@@ -168,17 +168,19 @@
   },
   "active": "d7e3b807fc8dd824",
   "lastOpenFiles": [
+    "02-rabbitmq-messaging-topology.md",
+    "Untitled.base",
+    "Untitled 1.base",
+    "01-solution-scaffolding-and-contracts.md",
+    "10-distributed-tracing-with-opentelemetry.md",
     "09-saga-pattern-with-compensation.md",
     "08-backend-for-frontend-pattern.md",
     "03-cqrs-with-mediatr.md",
     "12-api-documentation.md",
     "07-event-driven-consumer-pattern.md",
     "04-basket-operations-and-event-consumer.md",
-    "02-rabbitmq-messaging-topology.md",
-    "01-solution-scaffolding-and-contracts.md",
     "api-documentation.md",
     "11-docker-compose-and-containerization.md",
-    "10-distributed-tracing-with-opentelemetry.md",
     "06-order-submission-and-events.md",
     "05-minimal-service-boundary.md",
     "rabbitmq-messaging-topology.md",
@@ -192,7 +194,6 @@
     "basket-operations-and-event-consumer.md",
     "cqrs-with-mediatr.md",
     "solution-scaffolding-and-contracts.md",
-    "retrospective.md",
-    "README.md"
+    "retrospective.md"
   ]
 }

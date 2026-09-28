@@ -41,7 +41,7 @@ One paragraph: what was decided/built and why it matters for the project.
 
 ```
 # Example test commands and output
-dotnet build C19.sln
+dotnet build EcommerceDemo.slnx
 docker compose up --build
 ```
 
