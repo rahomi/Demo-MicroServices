@@ -437,7 +437,7 @@ docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
 ### 2. Start Jaeger (optional, for tracing)
 
 ```bash
-docker run -d --name jaeger -p 16686:16686 -p 4317:4317 -e COLLECTOR_OTLP_ENABLED=true jaegertracing/all-in-one:1.62
+docker run -d --name jaeger -p 16686:16686 -p 4317:4317 -e COLLECTOR_OTLP_ENABLED=true jaegertracing/all-in-one:1.62.0
 ```
 
 ### 3. Run each service in a separate terminal
